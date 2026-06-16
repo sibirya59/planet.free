@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 
 <style>
 /* ═══════════════════════════════════════════════
@@ -1140,123 +1140,242 @@ function addCart(name) {
 }
 
 /* ══════════════════════════════════════════════════
-   THREE.JS — FALLING LEAF PARTICLES
-   Scroll'a göre ivmelenen düşen yapraklar
+   CANVAS 2D — FOTOGERÇEKÇİ DÜŞEN YAPRAKLAR
+   Radial gradient + damar çizimi + GSAP fizik
 ══════════════════════════════════════════════════ */
 (function () {
   const canvas = document.getElementById('particle-canvas');
+  const ctx    = canvas.getContext('2d');
+  const wrap   = canvas.parentElement;
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  let W = 0, H = 0;
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
-  camera.position.set(0, 0, 8);
+  function resize() {
+    W = canvas.width  = wrap.clientWidth  * Math.min(devicePixelRatio, 2);
+    H = canvas.height = wrap.clientHeight * Math.min(devicePixelRatio, 2);
+    canvas.style.width  = wrap.clientWidth  + 'px';
+    canvas.style.height = wrap.clientHeight + 'px';
+  }
+  resize();
+  window.addEventListener('resize', resize);
 
-  /* LIGHTS */
-  scene.add(new THREE.AmbientLight(0xffffff, .4));
-  const key = new THREE.DirectionalLight(0xa3e635, 1.0);
-  key.position.set(3, 5, 6);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0x22c55e, .5);
-  fill.position.set(-5, -3, 4);
-  scene.add(fill);
+  /* ── BASIL LEAF PATH (normalised, -0.5..+0.5 x, -1..+1 y) ── */
+  function leafPath(ctx, cx, cy, w, h, rotZ, rotY, rotX) {
+    // Foreshortening illüzyonu: 3D döndürmeyi 2D scale ile simüle et
+    const scX = Math.cos(rotY);   // Y etrafında dönünce x daralır
+    const scY = Math.cos(rotX);   // X etrafında dönünce y daralır
 
-  /* LEAF GEOMETRY — single shared geo */
-  function makeLeafGeo(scale = 1) {
-    const s = new THREE.Shape();
-    const N = 48;
-    for (let i = 0; i <= N; i++) {
-      const t = i / N;
-      const a = t * Math.PI * 2;
-      const wave = 1 + .04 * Math.sin(a * 5) + .015 * Math.sin(a * 9);
-      const base = .85 - .22 * Math.pow(Math.sin(t * Math.PI), .55);
-      const r = base * wave * scale;
-      const x = Math.sin(a) * r * .68;
-      const y = Math.cos(a) * r;
-      i === 0 ? s.moveTo(x, y) : s.lineTo(x, y);
-    }
-    s.closePath();
-    return new THREE.ExtrudeGeometry(s, {
-      depth: .035, bevelEnabled: true,
-      bevelThickness: .012, bevelSize: .008, bevelSegments: 3,
-      curveSegments: 28
-    });
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotZ);
+    ctx.scale(w * scX, h * scY);
+
+    // Gerçekçi fesleğen yaprağı — wavy kenarlı oval
+    ctx.beginPath();
+    ctx.moveTo(0, -1.0);
+
+    // Sol üst
+    ctx.bezierCurveTo(-0.05, -0.95, -0.38, -0.80,  -0.48, -0.55);
+    // Sol dışbükey orta
+    ctx.bezierCurveTo(-0.60, -0.28, -0.60,  0.00,  -0.55,  0.15);
+    // Sol alt wavy
+    ctx.bezierCurveTo(-0.50,  0.30, -0.42,  0.48,  -0.38,  0.55);
+    ctx.bezierCurveTo(-0.32,  0.65, -0.24,  0.70,  -0.18,  0.68);
+    // Stem sol
+    ctx.bezierCurveTo(-0.12,  0.78, -0.06,  0.88,   0.00,  1.00);
+    // Stem sağ
+    ctx.bezierCurveTo( 0.06,  0.88,  0.12,  0.78,   0.18,  0.68);
+    // Sağ alt wavy
+    ctx.bezierCurveTo( 0.24,  0.70,  0.32,  0.65,   0.38,  0.55);
+    ctx.bezierCurveTo( 0.42,  0.48,  0.50,  0.30,   0.55,  0.15);
+    // Sağ dışbükey orta
+    ctx.bezierCurveTo( 0.60,  0.00,  0.60, -0.28,   0.48, -0.55);
+    // Sağ üst
+    ctx.bezierCurveTo( 0.38, -0.80,  0.05, -0.95,   0.00, -1.00);
+    ctx.closePath();
   }
 
-  const leafGeo = makeLeafGeo(1);
+  /* ── RENK PALETİ ── */
+  const palettes = [
+    // Koyu fesleğen yeşili (çoğunluk)
+    { base: '#1e5c2e', mid: '#2d7a3a', light: '#4a9e55', vein: '#0f3018', stem: '#0a2010' },
+    // Açık neon lime (azınlık)
+    { base: '#3d7a1a', mid: '#5ca629', light: '#8fd44a', vein: '#1e4008', stem: '#122a04' },
+  ];
 
-  /* VEIN geo (shared LineSegments) */
-  function makeVeinLines() {
-    const pts = [];
-    // main vein
-    for (let i = 0; i < 20; i++) {
-      const t0 = i / 20, t1 = (i + 1) / 20;
-      pts.push(
-        new THREE.Vector3(Math.sin(t0*.3)*.03, -1 + t0*2, .045),
-        new THREE.Vector3(Math.sin(t1*.3)*.03, -1 + t1*2, .045)
-      );
-    }
-    // side veins
-    for (let v = 0; v < 7; v++) {
-      const t = (v + 1) / 8;
-      const y = -1 + t * 2;
-      const side = v % 2 === 0 ? 1 : -1;
-      const len = .18 + .2 * Math.sin(t * Math.PI);
-      pts.push(
-        new THREE.Vector3(0, y, .045),
-        new THREE.Vector3(side * len, y + .04, .045)
-      );
-    }
-    const geo = new THREE.BufferGeometry().setFromPoints(pts);
-    return new THREE.LineSegments(geo,
-      new THREE.LineBasicMaterial({ color: 0x1e4d35, transparent: true, opacity: .35 })
+  /* ── YAPRAĞIN KENDİSİNİ ÇİZ ── */
+  function drawLeaf(l) {
+    const p = l.palette;
+    const cx = l.x * W, cy = l.y * H;
+    const w = l.size, h = l.size * 1.25;
+
+    ctx.save();
+
+    // Gölge (derin, bokeh gibi)
+    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur    = l.size * 0.35;
+    ctx.shadowOffsetX = l.size * 0.08;
+    ctx.shadowOffsetY = l.size * 0.14;
+
+    // Yaprak dolgusu — radial gradient (ışık sol üstten geliyor)
+    leafPath(ctx, cx, cy, w, h, l.rz, l.ry, l.rx);
+
+    const gx = cx + Math.cos(l.rz - 0.8) * w * 0.3;
+    const gy = cy + Math.sin(l.rz - 0.8) * h * 0.3;
+    const grad = ctx.createRadialGradient(gx, gy, 0, cx, cy, w * 1.1);
+    grad.addColorStop(0.00, p.light);
+    grad.addColorStop(0.30, p.mid);
+    grad.addColorStop(0.70, p.base);
+    grad.addColorStop(1.00, p.stem);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Kenar özeti (ince highlight)
+    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth   = w * 0.012;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Yüzey parlaması (clearcoat illüzyonu)
+    ctx.save();
+    leafPath(ctx, cx, cy, w * 0.55, h * 0.55, l.rz, l.ry, l.rx);
+    const shine = ctx.createRadialGradient(
+      cx + Math.cos(l.rz - 1.2) * w * 0.18,
+      cy + Math.sin(l.rz - 1.2) * h * 0.18,
+      0,
+      cx, cy, w * 0.55
     );
-  }
+    shine.addColorStop(0, 'rgba(255,255,255,0.18)');
+    shine.addColorStop(0.5,'rgba(255,255,255,0.04)');
+    shine.addColorStop(1,  'rgba(255,255,255,0.00)');
+    ctx.fillStyle = shine;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
 
-  /* MATERIALS */
-  const matGreen = new THREE.MeshPhysicalMaterial({
-    color: 0x2d6a4f, roughness: .55, metalness: 0,
-    transparent: true, opacity: .82,
-    side: THREE.DoubleSide, transmission: .12, thickness: .08
-  });
+    // Damarlar — sadece leaf yeterince büyükse
+    if (l.size > 30) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(l.rz);
+      ctx.scale(w * Math.cos(l.ry), h * Math.cos(l.rx));
 
-  const matLime = new THREE.MeshPhysicalMaterial({
-    color: 0x84cc16, roughness: .4, metalness: .1,
-    transparent: true, opacity: .75,
-    side: THREE.DoubleSide, transmission: .2, thickness: .08,
-    emissive: 0xa3e635, emissiveIntensity: .08
-  });
+      ctx.strokeStyle = p.vein;
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.55;
 
-  /* PARTICLE CLASS */
-  const PARTICLE_COUNT = 28;
-  const particles = [];
+      // Ana damar
+      ctx.lineWidth = 0.025;
+      ctx.beginPath();
+      ctx.moveTo(0, -0.90);
+      for (let i = 0; i <= 20; i++) {
+        const t = i / 20;
+        const vx = Math.sin(t * Math.PI * 0.6) * 0.03;
+        ctx.lineTo(vx, -0.90 + t * 1.80);
+      }
+      ctx.stroke();
 
-  class LeafParticle {
-    constructor(index) {
-      this.index = index;
-      this.isNeon = Math.random() < .28;
-
-      // mesh
-      const mat = this.isNeon ? matLime.clone() : matGreen.clone();
-      this.mesh = new THREE.Mesh(leafGeo, mat);
-
-      // vein lines (only on some for perf)
-      if (Math.random() < .5) {
-        this.veins = makeVeinLines();
-        this.mesh.add(this.veins);
+      // Yan damarlar
+      ctx.lineWidth = 0.013;
+      for (let v = 0; v < 7; v++) {
+        const t    = (v + 1) / 8;
+        const vy   = -0.90 + t * 1.80;
+        const side = v % 2 === 0 ? 1 : -1;
+        const len  = (Math.sin(t * Math.PI) * 0.38 + 0.05);
+        ctx.beginPath();
+        ctx.moveTo(Math.sin(t * Math.PI * 0.6) * 0.03, vy);
+        ctx.quadraticCurveTo(side * len * 0.5, vy - 0.04, side * len, vy - 0.12);
+        ctx.stroke();
       }
 
-      this.scale = .12 + Math.random() * .22;
-      this.mesh.scale.setScalar(this.scale);
+      ctx.restore();
+    }
+  }
 
-      scene.add(this.mesh);
-      this.reset(true);
+  /* ── YAPRAK PARTİKELLERİ ── */
+  const COUNT = 20;
+  const leaves = [];
+
+  function rand(min, max) { return min + Math.random() * (max - min); }
+
+  class LeafParticle {
+    constructor(initial) {
+      this.palette = Math.random() < 0.25 ? palettes[1] : palettes[0];
+      this.size    = rand(28, 100);
+      this.phase   = rand(0, Math.PI * 2);
+      this.spawn(initial);
     }
 
-    reset(initial = false) {
-      // spawn above viewport
-      this.x = (Math.random() - .5) * 14;
+    spawn(initial = false) {
+      this.x  = rand(0.0, 1.0);
+      this.y  = initial ? rand(-0.2, 1.1) : rand(-0.25, -0.05);
+
+      this.vy = rand(0.0008, 0.0022);
+      this.vx = rand(-0.0004, 0.0004);
+
+      this.rx = rand(0, Math.PI * 2);
+      this.ry = rand(0, Math.PI * 2);
+      this.rz = rand(0, Math.PI * 2);
+
+      this.drx = rand(-0.018, 0.018);
+      this.dry = rand(-0.025, 0.025);
+      this.drz = rand(-0.010, 0.010);
+    }
+
+    update(dt, scrollMult) {
+      const spd = 1 + scrollMult * 5;
+
+      this.y   += this.vy * spd * dt * 60;
+      this.x   += this.vx * spd * dt * 60;
+      this.x   += Math.sin(this.rz * 3 + this.phase) * 0.00015 * dt * 60;
+
+      this.rx  += (this.drx + (scrollMult > 0.3 ? Math.sin(Date.now() * 0.05 + this.phase) * 0.04 : 0)) * spd;
+      this.ry  += this.dry * spd;
+      this.rz  += this.drz * spd;
+
+      if (this.y > 1.18) this.spawn();
+    }
+  }
+
+  for (let i = 0; i < COUNT; i++) leaves.push(new LeafParticle(true));
+
+  /* ── SCROLL IVME ── */
+  let scrollMult = 0, lastSY = 0;
+  window.addEventListener('scroll', () => {
+    scrollMult = Math.min(Math.abs(scrollY - lastSY) * 0.06, 1.5);
+    lastSY = scrollY;
+  });
+
+  /* ── ANİMASYON DÖNGÜSÜ ── */
+  let last = performance.now();
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+
+    scrollMult *= 0.88;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Derinlik hissi için arkadaki yaprakları önce çiz (küçük = uzak)
+    const sorted = [...leaves].sort((a, b) => a.size - b.size);
+    sorted.forEach(l => {
+      ctx.globalAlpha = 0.5 + (l.size / 100) * 0.5; // uzak = soluk
+      l.update(dt, scrollMult);
+      drawLeaf(l);
+    });
+
+    ctx.globalAlpha = 1;
+  }
+  requestAnimationFrame(animate);
+})();
+</script>
+
+</body>
+</html>
       this.y = initial ? (Math.random() - .5) * 12 : 7 + Math.random() * 4;
       this.z = (Math.random() - .5) * 5;
 
