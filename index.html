@@ -1,0 +1,3402 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sera">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Sera Dashboard</title>
+<style>
+  :root {
+    /* Karanlık tema (varsayılan) */
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card-2: #232831;
+    --text: #e7eaf0;
+    --muted: #8a93a4;
+    --border: rgba(255,255,255,0.06);
+    --green: #34c759;
+    --blue: #0a84ff;
+    --orange: #ff9f0a;
+    --red: #ff453a;
+    --yellow: #ffd60a;
+    --purple: #bf5af2;
+  }
+  body[data-tema="aydinlik"] {
+    /* Aydınlık tema */
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --card-2: #eef1f5;
+    --text: #1a1d24;
+    --muted: #6a7280;
+    --border: rgba(0,0,0,0.08);
+    --green: #1a9444;
+    --blue: #0066cc;
+    --orange: #d97706;
+    --red: #dc2626;
+    --yellow: #ca8a04;
+    --purple: #7e22ce;
+  }
+  body { transition: background 0.3s ease, color 0.3s ease; }
+  .card, .durum, .saat-karti, .config-banner, .manita-card { transition: background 0.3s ease, border-color 0.3s ease; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Inter", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
+    min-height: 100vh;
+  }
+  header {
+    padding: 24px 0 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .durum {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); padding: 12px 16px; border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .durum-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+  .durum-dot.off  { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .durum-dot.wait { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .durum-text { font-size: 14px; }
+  .durum-time { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .card-icon {
+    font-size: 20px;
+  }
+  .card-title { font-size: 13px; color: var(--muted); }
+  .card-value {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+    font-feature-settings: "tnum";
+  }
+  .card-unit { font-size: 14px; color: var(--muted); margin-left: 4px; }
+  .card-status { font-size: 11px; margin-top: 6px; font-weight: 500; }
+  .status-normal  { color: var(--green); }
+  .status-dusuk   { color: var(--blue); }
+  .status-yuksek  { color: var(--orange); }
+  .status-kritik  { color: var(--red); }
+  .badge-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .badge-dot.normal  { background: var(--green); }
+  .badge-dot.dusuk   { background: var(--blue); }
+  .badge-dot.yuksek  { background: var(--orange); }
+  .badge-dot.kritik  { background: var(--red); }
+  footer {
+    margin-top: 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 16px 0;
+  }
+  .config-banner {
+    background: #2a2010;
+    border: 1px solid var(--orange);
+    color: #ffd9a0;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* === Tema değiştirici buton === */
+  .tema-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.3s ease, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tema-btn:hover { background: var(--card-2); transform: rotate(20deg); }
+  .header-buttons { display: flex; gap: 8px; align-items: center; }
+
+  /* === Büyük Saat Kartı === */
+  .saat-karti {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .saat-karti.kritik::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,69,58,0.15), transparent 70%);
+    animation: kritikPulse 1.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes kritikPulse {
+    0%, 100% { opacity: 0.3; }
+    50%      { opacity: 1; }
+  }
+  .saat-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .saat-buyuk {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    font-feature-settings: "tnum";
+    line-height: 1;
+    color: var(--text);
+  }
+  .saat-tarih {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: capitalize;
+  }
+  .saat-durum {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .saat-sag {
+    text-align: right;
+    border-left: 1px solid var(--border);
+    padding-left: 16px;
+  }
+  .saat-sag-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .saat-esp {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 4px;
+    font-feature-settings: "tnum";
+  }
+  .saat-esp.bayatlik {
+    color: var(--orange);
+  }
+  .saat-esp.cok-bayatlik {
+    color: var(--red);
+  }
+  .saat-fark {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* === Trend okları === */
+  .trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    margin-left: 6px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+  .trend.yukari { color: var(--green); background: rgba(52,199,89,0.12); }
+  .trend.asagi  { color: var(--red);   background: rgba(255,69,58,0.12); }
+  .trend.sabit  { color: var(--muted); background: rgba(138,147,164,0.12); }
+
+  /* === Hasat Sayacı Kartı === */
+  .hasat-karti {
+    background: linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .hasat-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .hasat-baslik {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .hasat-ayarla-btn {
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .hasat-ayarla-btn:hover { background: var(--card); }
+  .hasat-progress {
+    height: 8px;
+    background: var(--card-2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .hasat-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a9c3a 0%, #6cc257 50%, #ffd60a 100%);
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+  .hasat-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .hasat-info-item {
+    color: var(--text);
+  }
+  .hasat-info-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  .hasat-info-value {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .hasat-info-value.buyuk {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .hasat-faz-rozet {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .hasat-faz-cimlenme   { background: rgba(138,147,164,0.2); color: var(--muted); }
+  .hasat-faz-fide       { background: rgba(10,132,255,0.2);  color: var(--blue); }
+  .hasat-faz-vejetatif  { background: rgba(52,199,89,0.2);   color: var(--green); }
+  .hasat-faz-hasathazir { background: rgba(255,159,10,0.2);  color: var(--orange); }
+  .hasat-faz-hasat      { background: rgba(255,69,58,0.2);   color: var(--red); }
+
+  /* === Bitkilerim — çoklu kart konteyneri === */
+  .bitkiler-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 4px 10px;
+  }
+  .bitkiler-bar-sol { display: flex; align-items: baseline; gap: 10px; }
+  .bitkiler-baslik {
+    font-size: 13px;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .bitkiler-ozet { font-size: 11px; color: var(--muted); }
+  .bitki-ekle-btn {
+    background: var(--green);
+    border: none;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bitki-ekle-btn:active { transform: scale(0.96); }
+  .bitkiler-bos {
+    background: var(--card-2);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    color: var(--muted);
+    text-align: center;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  /* Bitki kart başlığı (isim + emoji + 3-nokta menü) */
+  .bitki-head-isim {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .bitki-emoji { font-size: 20px; }
+  .bitki-tip-tag {
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--card-2);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 4px;
+  }
+  .bitki-menu-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+  }
+  .bitki-menu-btn:active { background: var(--card-2); }
+  .bitki-menu-pop {
+    position: absolute;
+    top: 44px;
+    right: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: none;
+  }
+  .bitki-menu-pop.acik { display: block; }
+  .bitki-menu-pop button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .bitki-menu-pop button:hover { background: var(--card-2); }
+  .bitki-menu-pop button.tehlike { color: var(--red); }
+
+  /* === Min/Max satırı (kart içi) === */
+  .card-minmax {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .card-minmax span { font-feature-settings: "tnum"; }
+  .card-minmax b { color: var(--text); font-weight: 600; }
+
+  /* Kart tıklanabilir */
+  .card { cursor: pointer; transition: transform 0.15s ease, background 0.2s ease; }
+  .card:active { transform: scale(0.98); }
+  .card:hover { background: var(--card-2); }
+
+  /* === Grafik / Modal === */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .modal-overlay.acik { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+  }
+  .modal-baslik {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-baslik h3 { font-size: 16px; font-weight: 600; }
+  .modal-kapat {
+    background: var(--card-2);
+    border: none;
+    color: var(--text);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .modal-buyuk-deger {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+  .modal-aralik {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 14px 0;
+  }
+  .modal-aralik-kutu {
+    background: var(--card-2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .modal-aralik-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal-aralik-deger { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  .modal-grafik {
+    background: var(--card-2);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+  }
+  .modal-grafik-baslik {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modal-grafik svg { width: 100%; height: auto; }
+
+  /* === Ayarlar Modalı === */
+  .ayarlar-form { display: flex; flex-direction: column; gap: 12px; }
+  .ayarlar-form label { font-size: 13px; color: var(--muted); }
+  .ayarlar-form input[type="number"], .ayarlar-form input[type="text"], .ayarlar-form select {
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    width: 100%;
+  }
+  .ayarlar-form input:focus, .ayarlar-form select:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+  .ayarlar-aksiyon {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .ayarlar-buton {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .ayarlar-buton.kaydet { background: var(--green); color: white; }
+  .ayarlar-buton.iptal  { background: var(--card-2); color: var(--text); border: 1px solid var(--border); }
+
+  /* === Bildirim banner (in-app) === */
+  .bildirim-banner {
+    position: fixed;
+    top: env(safe-area-inset-top);
+    left: 16px; right: 16px;
+    margin: 12px auto;
+    max-width: 500px;
+    background: var(--red);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(255,69,58,0.4);
+    z-index: 90;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    animation: bildirimGir 0.3s ease;
+  }
+  .bildirim-banner.acik { display: flex; }
+  @keyframes bildirimGir {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .bildirim-banner button {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* === Manita kartı === */
+  .manita-card {
+    position: relative;
+    background: linear-gradient(135deg, #1a1722 0%, #251826 50%, #1d1722 100%);
+    border: 1px solid rgba(255, 107, 157, 0.18);
+    border-radius: 18px;
+    padding: 18px 16px 16px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(255, 107, 157, 0.08);
+  }
+  .manita-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 30%, rgba(255, 107, 157, 0.10), transparent 60%);
+    pointer-events: none;
+  }
+  .manita-card.gizli { display: none; }
+
+  .manita-hide-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: rgba(255,255,255,0.06);
+    border: none;
+    color: var(--muted);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    z-index: 2;
+    transition: background 0.2s;
+  }
+  .manita-hide-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+
+  .manita-show-btn {
+    display: none;
+    background: rgba(255, 107, 157, 0.15);
+    color: #ffaad4;
+    border: 1px solid rgba(255, 107, 157, 0.3);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: background 0.2s;
+  }
+  .manita-show-btn:hover { background: rgba(255, 107, 157, 0.25); }
+
+  .manita-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+  }
+  .manita-tree-wrap {
+    flex: 0 0 110px;
+    height: 130px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .manita-tree {
+    width: 110px;
+    height: 130px;
+    animation: manitaSway 5s ease-in-out infinite;
+    transform-origin: 50% 100%;
+  }
+  @keyframes manitaSway {
+    0%, 100% { transform: rotate(-1.5deg); }
+    50%      { transform: rotate(1.5deg); }
+  }
+  .manita-leaf {
+    transform-origin: center;
+    animation: manitaRustle 4s ease-in-out infinite;
+  }
+  .manita-leaf.l2 { animation-delay: -1.3s; }
+  .manita-leaf.l3 { animation-delay: -2.6s; }
+  .manita-leaf.l4 { animation-delay: -3.5s; }
+  @keyframes manitaRustle {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.05); }
+  }
+  .manita-blossom {
+    animation: manitaBloom 3s ease-in-out infinite;
+    transform-origin: center;
+  }
+  .manita-blossom.b2 { animation-delay: -0.8s; }
+  .manita-blossom.b3 { animation-delay: -1.6s; }
+  .manita-blossom.b4 { animation-delay: -2.4s; }
+  @keyframes manitaBloom {
+    0%, 100% { transform: scale(0.7); opacity: 0.6; }
+    50%      { transform: scale(1.2); opacity: 1; }
+  }
+  .manita-heart {
+    fill: #ff6b9d;
+    font-size: 11px;
+    opacity: 0;
+    animation: manitaFloat 5s ease-out infinite;
+  }
+  .manita-heart.h1 { animation-delay: 0s; }
+  .manita-heart.h2 { animation-delay: 1.7s; }
+  .manita-heart.h3 { animation-delay: 3.4s; }
+  @keyframes manitaFloat {
+    0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translateY(-35px) scale(1); opacity: 0; }
+  }
+  .manita-grow-ring {
+    fill: none;
+    stroke: rgba(255, 107, 157, 0.3);
+    stroke-width: 1;
+    transform-origin: center;
+    animation: manitaPulse 3.5s ease-in-out infinite;
+  }
+  @keyframes manitaPulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.4; }
+    50%      { transform: scale(1.1); opacity: 0.1; }
+  }
+
+  .manita-info { flex: 1; min-width: 0; }
+  .manita-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ff8fb3;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .manita-big {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+    font-feature-settings: "tnum";
+  }
+  .manita-detail {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .manita-live {
+    font-size: 12px;
+    color: #ffaad4;
+    margin-top: 6px;
+    font-feature-settings: "tnum";
+    letter-spacing: 0.5px;
+  }
+  /* === Kontrol Merkezi (Aktüatörler) === */
+  .kontrol-bolum { margin-top: 24px; }
+  .kontrol-baslik { font-size: 13px; color: var(--text); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 12px; padding-left: 4px; }
+  .kontrol-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .aktor-kart { background: var(--card); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; border: 1px solid var(--border); transition: background 0.3s ease; }
+  .aktor-kart.aktif { background: rgba(46, 204, 113, 0.1); border-color: var(--green); }
+  .aktor-ikon { font-size: 32px; margin-bottom: 8px; transition: transform 0.3s ease; }
+  .aktor-kart.aktif .aktor-ikon.donen { animation: donme 2s linear infinite; }
+  @keyframes donme { 100% { transform: rotate(360deg); } }
+  .aktor-isim { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-2); transition: .4s; border-radius: 34px; }
+  .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--green); }
+  input:checked + .slider:before { transform: translateX(22px); }
+
+  /* === Dozajlama === */
+  .dozaj-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .dozaj-kart { background: var(--card); border-radius: 16px; padding: 16px; border: 1px solid var(--border); }
+  .dozaj-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .dozaj-isim { font-weight: 600; font-size: 15px; }
+  .dozaj-butonlar { display: flex; gap: 8px; margin-bottom: 12px; }
+  .dozaj-btn { flex: 1; background: var(--card-2); border: 1px solid var(--border); color: var(--text); padding: 8px 0; border-radius: 8px; font-weight: 600; cursor: pointer; }
+  .dozaj-btn:active { background: var(--green); color: white; }
+  .dozaj-input-grup { display: flex; gap: 8px; }
+  .dozaj-input-grup input { flex: 1; background: var(--card-2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 12px; }
+  .dozaj-input-grup button { background: var(--blue); color: white; border: none; border-radius: 8px; padding: 0 16px; font-weight: 600; cursor: pointer; }
+
+  /* === Zamanlama / Otomasyon === */
+  .timer-kart { background: var(--card); border-radius: 16px; padding: 16px; border: 1px solid var(--border); margin-bottom: 12px; }
+  .timer-satir { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .timer-input { background: var(--card-2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; width: 100px; font-family: inherit; }
+
+  /* === Akıllı Günlük Takvim Izgarası === */
+  .calendar-container {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .calendar-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    padding: 2px;
+  }
+  .calendar-day:hover {
+    background: rgba(255,255,255,0.05);
+  }
+  .calendar-day.out-of-range {
+    opacity: 0.2;
+    cursor: default;
+  }
+  .calendar-day.out-of-range:hover {
+    background: var(--card-2);
+  }
+  .calendar-day.selected {
+    background: var(--green) !important;
+    border-color: var(--green) !important;
+    color: #fff !important;
+  }
+  .calendar-day-num {
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .calendar-day-sub {
+    font-size: 8px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .calendar-day.selected .calendar-day-sub {
+    color: rgba(255,255,255,0.8);
+  }
+  .event-dots {
+    display: flex;
+    gap: 2.5px;
+    margin-top: 3px;
+    justify-content: center;
+  }
+  .event-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+  }
+  .dot-ekim { background: #3498db; }
+  .dot-isik { background: #f1c40f; }
+  .dot-transfer { background: #9b59b6; }
+  .dot-budama { background: #e67e22; }
+  .dot-hasat { background: #e74c3c; }
+
+  /* === Bottom Nav (Sekmeler) === */
+  body { padding-bottom: calc(env(safe-area-inset-bottom) + 80px) !important; }
+  .tab-view { display: none; animation: fadeIn 0.3s ease; }
+  .tab-view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 80;
+  }
+  .nav-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 16px 0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  .nav-btn.active { color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sera</h1>
+  <div class="header-buttons">
+    <button id="manita-show-btn" class="manita-show-btn" onclick="manitaToggle()" title="Manita kartını göster" style="display:none;">♡ Göster</button>
+    <button id="bildirim-btn" class="tema-btn" onclick="bildirimIzni()" title="Bildirim ayarı">🔔</button>
+    <button id="tema-btn" class="tema-btn" onclick="temaDegistir()" title="Tema değiştir">🌙</button>
+  </div>
+</header>
+
+<div id="config-banner" class="config-banner" style="display:none;">
+  <strong>Yapılandırma gerekli:</strong> Bu dosyayı bir editörle açıp en alttaki
+  <code>FIREBASE_CONFIG</code> değerlerini kendi Firebase projenden alıp doldur.
+</div>
+
+<!-- Manita kartı (şimdilik gizli — geri açmak için style="display:none" sil) -->
+<div id="manita-card" class="manita-card" style="display:none;">
+  <button class="manita-hide-btn" onclick="manitaToggle()" title="Gizle">×</button>
+  <div class="manita-content">
+    <div class="manita-tree-wrap">
+      <svg class="manita-tree" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="trunkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#7a4f2e"/>
+            <stop offset="100%" stop-color="#4a2f1c"/>
+          </linearGradient>
+          <radialGradient id="leafGrad1" cx="50%" cy="40%">
+            <stop offset="0%" stop-color="#7dd96b"/>
+            <stop offset="100%" stop-color="#4a9c3a"/>
+          </radialGradient>
+          <radialGradient id="leafGrad2" cx="50%" cy="40%">
+            <stop offset="0%" stop-color="#6cc257"/>
+            <stop offset="100%" stop-color="#3d8a2f"/>
+          </radialGradient>
+        </defs>
+
+        <!-- Toprak gölgesi -->
+        <ellipse cx="60" cy="132" rx="38" ry="4" fill="rgba(0,0,0,0.4)"/>
+
+        <!-- Pulsating ring (büyüme aurası) -->
+        <circle class="manita-grow-ring" cx="60" cy="60" r="48"/>
+
+        <!-- Gövde -->
+        <path d="M 58 130 Q 58 105 60 80 Q 62 60 60 40"
+              stroke="url(#trunkGrad)" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+        <!-- Dallar -->
+        <path d="M 60 80 Q 45 72 35 60" stroke="#5a3a22" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 60 65 Q 78 58 88 45" stroke="#5a3a22" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 60 50 Q 50 40 42 32" stroke="#5a3a22" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M 60 45 Q 72 38 80 28" stroke="#5a3a22" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+        <!-- Yaprak kümeleri -->
+        <ellipse class="manita-leaf l1" cx="35" cy="58" rx="22" ry="18" fill="url(#leafGrad1)"/>
+        <ellipse class="manita-leaf l2" cx="60" cy="40" rx="28" ry="22" fill="url(#leafGrad2)"/>
+        <ellipse class="manita-leaf l3" cx="88" cy="42" rx="22" ry="19" fill="url(#leafGrad1)"/>
+        <ellipse class="manita-leaf l4" cx="60" cy="60" rx="20" ry="16" fill="url(#leafGrad2)"/>
+
+        <!-- Çiçekler -->
+        <circle class="manita-blossom b1" cx="32" cy="50" r="2.5" fill="#ff6b9d"/>
+        <circle class="manita-blossom b2" cx="55" cy="35" r="2.8" fill="#ffaad4"/>
+        <circle class="manita-blossom b3" cx="82" cy="38" r="2.5" fill="#ff6b9d"/>
+        <circle class="manita-blossom b4" cx="68" cy="55" r="2.3" fill="#ffaad4"/>
+        <circle class="manita-blossom b1" cx="44" cy="45" r="2" fill="#ff8fb3"/>
+        <circle class="manita-blossom b3" cx="78" cy="55" r="2" fill="#ff8fb3"/>
+
+        <!-- Yükselen kalpler -->
+        <text class="manita-heart h1" x="50" y="30">♡</text>
+        <text class="manita-heart h2" x="75" y="25">♡</text>
+        <text class="manita-heart h3" x="62" y="20">♡</text>
+      </svg>
+    </div>
+
+    <div class="manita-info">
+      <div class="manita-label">Birlikteyiz · 26 Mart 2021</div>
+      <div class="manita-big" id="manita-big">—</div>
+      <div class="manita-detail" id="manita-detail">—</div>
+      <div class="manita-live" id="manita-live">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bildirim banner (in-app) -->
+<div id="bildirim-banner" class="bildirim-banner">
+  <span id="bildirim-mesaj">—</span>
+  <button onclick="bildirimKapat()">×</button>
+</div>
+
+<div id="view-sensor" class="tab-view active">
+<!-- Bitki takip konteyneri (çoklu bitki) -->
+<div id="bitkiler-bolum">
+  <div class="bitkiler-bar">
+    <div class="bitkiler-bar-sol">
+      <span class="bitkiler-baslik">🌱 Bitkilerim</span>
+      <span id="bitkiler-ozet" class="bitkiler-ozet">—</span>
+    </div>
+    <button class="bitki-ekle-btn" onclick="bitkiYeniAc()">+ Ekle</button>
+  </div>
+  <div id="aktif-dongu-karti" style="display:none; margin-bottom: 16px;"></div>
+  <div id="bitkiler-liste"></div>
+  <div id="bitkiler-bos" class="bitkiler-bos" style="display:none;">
+    Henüz bitki eklemedin. <strong>+ Ekle</strong> ile ilk bitkini başlat.
+  </div>
+</div>
+
+<!-- Büyük saat kartı -->
+<div id="saat-karti" class="saat-karti">
+  <div class="saat-grid">
+    <div>
+      <div class="saat-buyuk" id="saat-anlik">--:--:--</div>
+      <div class="saat-tarih" id="saat-tarih">—</div>
+      <div class="saat-durum">
+        <span id="durum-dot" class="durum-dot off"></span>
+        <span id="durum-text">Bağlanıyor...</span>
+      </div>
+    </div>
+    <div class="saat-sag">
+      <div class="saat-sag-label">📡 ESP Son Veri</div>
+      <div class="saat-esp" id="esp-saat">--:--:--</div>
+      <div class="saat-fark" id="esp-fark">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+</div> <!-- /view-sensor -->
+
+<div id="view-kontrol" class="tab-view">
+<!-- Kontrol Merkezi -->
+<div class="kontrol-bolum">
+  <div class="kontrol-baslik">⚡ Kontrol Merkezi</div>
+  <div class="kontrol-grid">
+    <div class="aktor-kart" id="kart-motor">
+      <div class="aktor-ikon" id="ikon-motor">⚙️</div>
+      <div class="aktor-isim">Su Motoru</div>
+      <div style="display:flex; gap:8px; margin-bottom:12px; width:100%">
+        <button id="mod-motor-oto" class="nav-btn active" style="flex:1; padding:6px; font-size:11px" onclick="modDegistir('motor', 'oto')">Oto</button>
+        <button id="mod-motor-man" class="nav-btn" style="flex:1; padding:6px; font-size:11px" onclick="modDegistir('motor', 'man')">Man</button>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="switch-motor" onchange="aktorDegistir('motor', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="aktor-kart" id="kart-isik">
+      <div class="aktor-ikon" id="ikon-isik">💡</div>
+      <div class="aktor-isim">Aydınlatma</div>
+      <div style="display:flex; gap:8px; margin-bottom:12px; width:100%">
+        <button id="mod-isik-oto" class="nav-btn active" style="flex:1; padding:6px; font-size:11px" onclick="modDegistir('isik', 'oto')">Oto</button>
+        <button id="mod-isik-man" class="nav-btn" style="flex:1; padding:6px; font-size:11px" onclick="modDegistir('isik', 'man')">Man</button>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="switch-isik" onchange="aktorDegistir('isik', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- Dozajlama Sistemi -->
+<div class="kontrol-bolum">
+  <div class="kontrol-baslik">🧪 Dozajlama Sistemi</div>
+  <div class="dozaj-grid">
+    <div class="dozaj-kart">
+      <div class="dozaj-head"><div style="font-size:24px">💧</div><div class="dozaj-isim">A Besini (Makro)</div></div>
+      <div class="dozaj-butonlar">
+        <button class="dozaj-btn" onclick="dozajVer('besinA', 1)">+1 ml</button>
+        <button class="dozaj-btn" onclick="dozajVer('besinA', 5)">+5 ml</button>
+        <button class="dozaj-btn" onclick="dozajVer('besinA', 10)">+10 ml</button>
+      </div>
+      <div class="dozaj-input-grup">
+        <input type="number" id="input-besinA" placeholder="Özel (ml)">
+        <button onclick="ozelDozajVer('besinA')">Ver</button>
+      </div>
+    </div>
+    <div class="dozaj-kart">
+      <div class="dozaj-head"><div style="font-size:24px">🧪</div><div class="dozaj-isim">B Besini (Mikro)</div></div>
+      <div class="dozaj-butonlar">
+        <button class="dozaj-btn" onclick="dozajVer('besinB', 1)">+1 ml</button>
+        <button class="dozaj-btn" onclick="dozajVer('besinB', 5)">+5 ml</button>
+        <button class="dozaj-btn" onclick="dozajVer('besinB', 10)">+10 ml</button>
+      </div>
+      <div class="dozaj-input-grup">
+        <input type="number" id="input-besinB" placeholder="Özel (ml)">
+        <button onclick="ozelDozajVer('besinB')">Ver</button>
+      </div>
+    </div>
+    <div class="dozaj-kart">
+      <div class="dozaj-head"><div style="font-size:24px">📉</div><div class="dozaj-isim">pH Düşürücü</div></div>
+      <div class="dozaj-butonlar">
+        <button class="dozaj-btn" onclick="dozajVer('phMinus', 1)">+1 ml</button>
+        <button class="dozaj-btn" onclick="dozajVer('phMinus', 2)">+2 ml</button>
+        <button class="dozaj-btn" onclick="dozajVer('phMinus', 5)">+5 ml</button>
+      </div>
+      <div class="dozaj-input-grup">
+        <input type="number" id="input-phMinus" placeholder="Özel (ml)">
+        <button onclick="ozelDozajVer('phMinus')">Ver</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Otomasyon / Zamanlayıcı -->
+<div class="kontrol-bolum">
+  <div class="kontrol-baslik">⏱ Otomasyon & Zamanlayıcı</div>
+  <div class="timer-kart">
+    <div style="font-weight:600; margin-bottom:8px;">💡 Işık Zamanlayıcısı</div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">Açılış Saati:</span>
+      <input type="time" class="timer-input" id="timer-isik-ac">
+    </div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">Kapanış Saati:</span>
+      <input type="time" class="timer-input" id="timer-isik-kapat">
+    </div>
+    <button class="ayarlar-buton kaydet" style="width:100%" onclick="timerKaydet('isik')">Işık Ayarını Kaydet</button>
+  </div>
+  <div class="timer-kart">
+    <div style="font-weight:600; margin-bottom:8px;">⚙️ Motor Döngüsü</div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">Çalışma (Dk):</span>
+      <input type="number" class="timer-input" id="timer-motor-calis" placeholder="15">
+    </div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">Bekleme (Dk):</span>
+      <input type="number" class="timer-input" id="timer-motor-bekle" placeholder="45">
+    </div>
+    <button class="ayarlar-buton kaydet" style="width:100%" onclick="timerKaydet('motor')">Motor Döngüsünü Kaydet</button>
+  </div>
+</div>
+
+<!-- Eşik Ayarları -->
+<div class="kontrol-bolum">
+  <div class="kontrol-baslik">🎯 Eşik Ayarları (Min - Max)</div>
+  <div class="timer-kart">
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">🌡 Sıcaklık (°C):</span>
+      <input type="number" class="timer-input" id="esik-sicaklik-min" placeholder="Min" style="width:60px">
+      <input type="number" class="timer-input" id="esik-sicaklik-max" placeholder="Max" style="width:60px">
+    </div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">💧 Nem (%):</span>
+      <input type="number" class="timer-input" id="esik-nem-min" placeholder="Min" style="width:60px">
+      <input type="number" class="timer-input" id="esik-nem-max" placeholder="Max" style="width:60px">
+    </div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">⚡ EC (mS):</span>
+      <input type="number" class="timer-input" id="esik-ec-min" placeholder="Min" step="0.1" style="width:60px">
+      <input type="number" class="timer-input" id="esik-ec-max" placeholder="Max" step="0.1" style="width:60px">
+    </div>
+    <div class="timer-satir">
+      <span style="font-size:13px; color:var(--muted);">🧪 pH:</span>
+      <input type="number" class="timer-input" id="esik-ph-min" placeholder="Min" step="0.1" style="width:60px">
+      <input type="number" class="timer-input" id="esik-ph-max" placeholder="Max" step="0.1" style="width:60px">
+    </div>
+    <button class="ayarlar-buton kaydet" style="width:100%" onclick="esikleriKaydet()">Eşikleri Firebase'e Kaydet</button>
+  </div>
+</div>
+
+</div> <!-- /view-kontrol -->
+
+<div id="view-takvim" class="tab-view">
+  <!-- Üretim Planlama & Takvim -->
+  <div class="kontrol-bolum">
+    <div class="kontrol-baslik">🤖 Akıllı Tarım Planlayıcısı</div>
+    <div class="timer-kart">
+      <div style="font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.4;">
+        Ekeceğiniz bitkileri seçin ve tohum ekim tarihini belirleyin. Yapay zeka planlayıcı, bitkilerin büyüme sürelerini optimize ederek eş zamanlı hasat takvimini oluşturacaktır.
+      </div>
+      
+      <div style="font-size:13px; color:var(--text); font-weight: 600; margin-bottom: 8px;">Ekilmek İstenen Bitkiler:</div>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px; background: var(--card-2); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px; cursor:pointer; color: var(--text);">
+          <input type="checkbox" id="chk-marul" checked style="width:18px; height:18px; accent-color:var(--green)">
+          🥬 Kıvırcık Marul
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px; cursor:pointer; color: var(--text);">
+          <input type="checkbox" id="chk-feslegen" checked style="width:18px; height:18px; accent-color:var(--green)">
+          🌿 Fesleğen
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px; cursor:pointer; color: var(--text);">
+          <input type="checkbox" id="chk-roka" checked style="width:18px; height:18px; accent-color:var(--green)">
+          🌱 Roka (Arugula)
+        </label>
+      </div>
+
+      <div class="timer-satir">
+        <span style="font-size:13px; color:var(--text); font-weight: 500;">Başlangıç Tarihi:</span>
+        <input type="date" class="timer-input" id="takvim-baslangic" style="width:160px">
+      </div>
+      <button class="ayarlar-buton kaydet" style="width:100%; margin-top:12px;" onclick="hesaplaTakvim()">Akıllı Plan Oluştur</button>
+    </div>
+  </div>
+
+  <!-- Sonuçlar Paneli -->
+  <div id="takvim-sonuc" style="display:none; margin-top: 16px;">
+    <!-- Roka Özel Bilgisi -->
+    <div id="roka-plan-kutu" class="kontrol-bolum" style="margin-top:16px; display:none;">
+      <div class="kontrol-baslik">🥬 Roka Ekim Planı (Eş Zamanlı Hasat)</div>
+      <div class="timer-kart" style="border-left: 4px solid var(--green); background: rgba(46, 204, 113, 0.05); padding: 14px;">
+        <div style="font-weight:600; color:var(--green); margin-bottom:6px; font-size:14px;">🚀 Roka İçin Zamanlama</div>
+        <div style="font-size:13px; margin-bottom:8px; line-height:1.4;">
+          Kıvırcık marul ile aynı anda hasat edebilmek için Roka tohumlarını <strong><span id="roka-ekim-tarihi">—</span></strong> tarihinde ekmelisiniz (Marul başlangıcından 10 gün sonra).
+        </div>
+        <div style="font-size:12px; color:var(--muted); line-height:1.3;">
+          Bu sayede Roka fideleri de Marul fideleriyle aynı gün (<strong><span id="roka-transfer-tarihi">—</span></strong>) NFT kanallarına aktarılabilir.
+        </div>
+      </div>
+    </div>
+
+    <!-- Günlük Takvim Izgarası -->
+    <div class="kontrol-bolum" style="margin-top:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding: 0 4px;">
+        <span class="kontrol-baslik" style="margin-bottom:0;" id="takvim-ay-yil">📅 Tarım Takvimi</span>
+        <div style="display:flex; gap:8px;">
+          <button class="hasat-ayarla-btn" onclick="oncekiAy()" style="padding: 4px 8px;">◀</button>
+          <button class="hasat-ayarla-btn" onclick="sonrakiAy()" style="padding: 4px 8px;">▶</button>
+        </div>
+      </div>
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <div>Pt</div><div>Sa</div><div>Ça</div><div>Pe</div><div>Cu</div><div>Ct</div><div>Pa</div>
+        </div>
+        <div class="calendar-grid" id="takvim-izgara"></div>
+      </div>
+    </div>
+
+    <!-- Günlük Detay Kartı -->
+    <div class="kontrol-bolum" style="margin-top:16px;">
+      <div class="kontrol-baslik" id="detay-tarih-baslik">📋 Gün Detayları</div>
+      <div class="timer-kart" id="takvim-gun-detay" style="padding: 16px; min-height: 100px;">
+        <div style="font-size:13px; color: var(--muted); text-align: center; padding: 20px 0;">
+          Detayları görmek için takvimden bir güne tıklayın.
+        </div>
+      </div>
+    </div>
+    
+    <button class="ayarlar-buton kaydet" style="width:100%; margin-top:12px;" onclick="aktifPlaniUygula()">
+       Bu Planı Serada Uygula ve Döngüyü Başlat
+    </button>
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="switchTab('view-sensor', this)">📊 Sensörler</button>
+  <button class="nav-btn" onclick="switchTab('view-kontrol', this)">⚙️ Kontroller</button>
+  <button class="nav-btn" onclick="switchTab('view-takvim', this)">📅 Takvim</button>
+</nav>
+
+<footer>
+  Sera Otomasyon · Firebase Realtime Database<br>
+  Ana Ekrana Ekle: Safari → Paylaş → Ana Ekrana Ekle
+</footer>
+
+<!-- Sensör grafik modalı -->
+<div id="grafik-modal" class="modal-overlay" onclick="if(event.target===this) grafikModalKapat()">
+  <div class="modal">
+    <div class="modal-baslik">
+      <h3 id="grafik-modal-baslik">Sensör</h3>
+      <button class="modal-kapat" onclick="grafikModalKapat()">×</button>
+    </div>
+    <div>
+      <div class="modal-buyuk-deger" id="grafik-modal-deger">—</div>
+      <div id="grafik-modal-status" style="font-size:12px; color: var(--muted); margin-top:4px;">—</div>
+    </div>
+    <div class="modal-aralik">
+      <div class="modal-aralik-kutu">
+        <div class="modal-aralik-label">Bugün Min</div>
+        <div class="modal-aralik-deger" id="grafik-min" style="color: var(--blue);">—</div>
+      </div>
+      <div class="modal-aralik-kutu">
+        <div class="modal-aralik-label">Bugün Ort</div>
+        <div class="modal-aralik-deger" id="grafik-ort">—</div>
+      </div>
+      <div class="modal-aralik-kutu">
+        <div class="modal-aralik-label">Bugün Max</div>
+        <div class="modal-aralik-deger" id="grafik-max" style="color: var(--orange);">—</div>
+      </div>
+    </div>
+    <div class="modal-grafik">
+      <div class="modal-grafik-baslik">Son saat (canlı veri)</div>
+      <div id="grafik-svg-wrap">—</div>
+    </div>
+    <div style="font-size:11px; color: var(--muted); margin-top:8px;">
+      💡 Veri ESP'den geldikçe grafik dolar. ESP yoksa Firebase Console'dan elle değer girdikçe çizilir.
+    </div>
+  </div>
+</div>
+
+<!-- Bitki ekle/düzenle modalı -->
+<div id="bitki-modal" class="modal-overlay" onclick="if(event.target===this) bitkiModalKapat()">
+  <div class="modal">
+    <div class="modal-baslik">
+      <h3 id="bitki-modal-baslik">🌱 Yeni Bitki Ekle</h3>
+      <button class="modal-kapat" onclick="bitkiModalKapat()">×</button>
+    </div>
+    <div class="ayarlar-form">
+      <label for="bitki-tip">Bitki türü</label>
+      <select id="bitki-tip" onchange="bitkiTipiDegisti()">
+        <option value="kivircik">🥬 Kıvırcık marul</option>
+        <option value="gobekli">🥗 Göbekli marul</option>
+        <option value="lollo">🌹 Lollo Rosso</option>
+        <option value="domates">🍅 Domates</option>
+        <option value="biber">🌶️ Biber</option>
+        <option value="salatalik">🥒 Salatalık</option>
+        <option value="feslegen">🌿 Fesleğen</option>
+        <option value="roka">🌱 Roka (Arugula)</option>
+        <option value="ozel">✏️ Özel (kendin tanımla)</option>
+      </select>
+
+      <label for="bitki-ad">İsim / Etiket</label>
+      <input type="text" id="bitki-ad" placeholder="Örn: Kıvırcık - Sol Raf" maxlength="40">
+
+      <label for="bitki-gun">Bugün kaçıncı gün? (tohumdan itibaren)</label>
+      <input type="number" id="bitki-gun" min="0" max="200" placeholder="Örn: 15">
+
+      <label for="bitki-hasat-gunu">Beklenen hasat günü</label>
+      <input type="number" id="bitki-hasat-gunu" min="10" max="200" value="42">
+
+      <div id="bitki-fazlar-bilgi" style="font-size:11px; color: var(--muted); line-height:1.5; background: var(--card-2); padding: 10px; border-radius: 8px;">
+        —
+      </div>
+
+      <div class="ayarlar-aksiyon">
+        <button class="ayarlar-buton iptal" onclick="bitkiModalKapat()">İptal</button>
+        <button class="ayarlar-buton kaydet" onclick="bitkiKaydet()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // MANITA SAYACI — 26 Mart 2021'den bu yana
+  // ============================================================
+  const MANITA_BASLANGIC = new Date(2021, 2, 26, 0, 0, 0); // ay 0-indexli: 2 = Mart
+  const MANITA_GIZLI_ANAHTAR = "manita_gizli";
+
+  function manitaHesapla() {
+    const simdi = new Date();
+    const fark = simdi - MANITA_BASLANGIC;
+
+    // Yıl, ay, gün hesabı (takvim bazlı)
+    let yil = simdi.getFullYear() - MANITA_BASLANGIC.getFullYear();
+    let ay  = simdi.getMonth() - MANITA_BASLANGIC.getMonth();
+    let gun = simdi.getDate() - MANITA_BASLANGIC.getDate();
+    if (gun < 0) {
+      ay--;
+      const oncekiAy = new Date(simdi.getFullYear(), simdi.getMonth(), 0);
+      gun += oncekiAy.getDate();
+    }
+    if (ay < 0) {
+      yil--;
+      ay += 12;
+    }
+
+    // Toplam birimler
+    const toplamSn = Math.floor(fark / 1000);
+    const toplamGun = Math.floor(toplamSn / 86400);
+    const saat   = Math.floor((toplamSn % 86400) / 3600);
+    const dakika = Math.floor((toplamSn % 3600) / 60);
+    const saniye = toplamSn % 60;
+
+    return { yil, ay, gun, toplamGun, saat, dakika, saniye };
+  }
+
+  function manitaPad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function manitaTRSayi(n) {
+    return n.toLocaleString("tr-TR");
+  }
+
+  function manitaGuncelle() {
+    const d = manitaHesapla();
+    const big = document.getElementById("manita-big");
+    const det = document.getElementById("manita-detail");
+    const liv = document.getElementById("manita-live");
+    if (!big) return;
+
+    big.textContent = `${d.yil} yıl ${d.ay} ay ${d.gun} gün`;
+    det.textContent = `${manitaTRSayi(d.toplamGun)} gün boyunca büyüdü`;
+    liv.textContent = `${manitaPad(d.saat)} : ${manitaPad(d.dakika)} : ${manitaPad(d.saniye)}`;
+  }
+
+  function manitaToggle() {
+    const card = document.getElementById("manita-card");
+    const showBtn = document.getElementById("manita-show-btn");
+    const gizli = card.classList.toggle("gizli");
+    showBtn.style.display = gizli ? "inline-block" : "none";
+    try { localStorage.setItem(MANITA_GIZLI_ANAHTAR, gizli ? "1" : "0"); } catch(e) {}
+  }
+  // Global erişim için
+  window.manitaToggle = manitaToggle;
+
+  function manitaInit() {
+    // Önceki gizleme tercihini hatırla
+    let gizli = false;
+    try { gizli = localStorage.getItem(MANITA_GIZLI_ANAHTAR) === "1"; } catch(e) {}
+    if (gizli) {
+      document.getElementById("manita-card").classList.add("gizli");
+      document.getElementById("manita-show-btn").style.display = "inline-block";
+    }
+    // İlk değer + saniyede bir g��ncelle
+    manitaGuncelle();
+    setInterval(manitaGuncelle, 1000);
+  }
+  document.addEventListener("DOMContentLoaded", manitaInit);
+
+  // ============================================================
+  // TEMA — Gece / Gündüz / Otomatik
+  // ============================================================
+  const TEMA_ANAHTAR = "sera_tema";
+
+  function temaUygula(tema) {
+    if (tema === "aydinlik") {
+      document.body.setAttribute("data-tema", "aydinlik");
+      document.getElementById("tema-btn").textContent = "☀️";
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f5f7fa");
+    } else {
+      document.body.removeAttribute("data-tema");
+      document.getElementById("tema-btn").textContent = "🌙";
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", "#0f1115");
+    }
+  }
+
+  function temaDegistir() {
+    const mevcut = document.body.getAttribute("data-tema") === "aydinlik" ? "aydinlik" : "karanlik";
+    const yeni = mevcut === "aydinlik" ? "karanlik" : "aydinlik";
+    temaUygula(yeni);
+    try { localStorage.setItem(TEMA_ANAHTAR, yeni); } catch(e) {}
+  }
+  window.temaDegistir = temaDegistir;
+
+  function temaInit() {
+    let tercih = null;
+    try { tercih = localStorage.getItem(TEMA_ANAHTAR); } catch(e) {}
+    if (!tercih) {
+      // Otomatik: 06:00-19:00 arası aydınlık, dışı karanlık
+      const saat = new Date().getHours();
+      tercih = (saat >= 6 && saat < 19) ? "aydinlik" : "karanlik";
+    }
+    temaUygula(tercih);
+  }
+  document.addEventListener("DOMContentLoaded", temaInit);
+
+  // ============================================================
+  // CANLI SAAT — En üstteki saat kartı
+  // ============================================================
+  const GUN_ADLARI = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  const AY_ADLARI  = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+                      "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+  function saatPad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function saatGuncelle() {
+    const simdi = new Date();
+    const ss = saatPad(simdi.getHours());
+    const dk = saatPad(simdi.getMinutes());
+    const sn = saatPad(simdi.getSeconds());
+    const anlik = document.getElementById("saat-anlik");
+    const tarih = document.getElementById("saat-tarih");
+    if (anlik) anlik.textContent = `${ss}:${dk}:${sn}`;
+    if (tarih) {
+      const gun = GUN_ADLARI[simdi.getDay()];
+      const ay  = AY_ADLARI[simdi.getMonth()];
+      tarih.textContent = `${gun}, ${simdi.getDate()} ${ay} ${simdi.getFullYear()}`;
+    }
+
+    // ESP son veri zamanı + "X önce"
+    if (window.__sonEspZamani) {
+      const fark = Math.floor((simdi.getTime() / 1000) - window.__sonEspZamani);
+      const espEl = document.getElementById("esp-fark");
+      const espSaatEl = document.getElementById("esp-saat");
+      if (espEl) espEl.textContent = farkOku(fark);
+
+      // Bayatlık göstergesi
+      espSaatEl.classList.remove("bayatlik", "cok-bayatlik");
+      if (fark > 600)      espSaatEl.classList.add("cok-bayatlik");  // > 10 dakika
+      else if (fark > 120) espSaatEl.classList.add("bayatlik");      // > 2 dakika
+    }
+  }
+
+  function farkOku(saniye) {
+    if (saniye < 0)    return "az önce";
+    if (saniye < 10)   return "az önce";
+    if (saniye < 60)   return saniye + " sn önce";
+    if (saniye < 3600) return Math.floor(saniye / 60) + " dk önce";
+    if (saniye < 86400)return Math.floor(saniye / 3600) + " saat önce";
+    return Math.floor(saniye / 86400) + " gün önce";
+  }
+  window.farkOku = farkOku;
+
+  setInterval(saatGuncelle, 1000);
+  document.addEventListener("DOMContentLoaded", saatGuncelle);
+
+  // ============================================================
+  // BİTKİLERİM — Çoklu bitki büyüme takibi
+  // ============================================================
+  const BITKILER_KEY = "sera_bitkiler";
+
+  // Her bitki tipi kendi hasat günü + faz tanımına sahip.
+  const PRESETLER = {
+    kivircik: {
+      ad: "Kıvırcık marul", ikon: "🥬", hasatGunu: 42,
+      fazlar: [
+        { min: 0,  max: 7,   ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 7,  max: 14,  ad: "Erken Fide",   rozet: "fide",       ikon: "🌱" },
+        { min: 14, max: 21,  ad: "Geç Fide",     rozet: "fide",       ikon: "🪴" },
+        { min: 21, max: 35,  ad: "Vejetatif",    rozet: "vejetatif",  ikon: "🌿" },
+        { min: 35, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🥬" }
+      ]
+    },
+    gobekli: {
+      ad: "Göbekli marul", ikon: "🥗", hasatGunu: 55,
+      fazlar: [
+        { min: 0,  max: 7,   ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 7,  max: 18,  ad: "Fide",         rozet: "fide",       ikon: "🌱" },
+        { min: 18, max: 30,  ad: "Yaprak Form",  rozet: "vejetatif",  ikon: "🌿" },
+        { min: 30, max: 48,  ad: "Göbek Sarma",  rozet: "vejetatif",  ikon: "🌿" },
+        { min: 48, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🥗" }
+      ]
+    },
+    lollo: {
+      ad: "Lollo Rosso", ikon: "🌹", hasatGunu: 45,
+      fazlar: [
+        { min: 0,  max: 7,   ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 7,  max: 18,  ad: "Fide",         rozet: "fide",       ikon: "🌱" },
+        { min: 18, max: 38,  ad: "Vejetatif",    rozet: "vejetatif",  ikon: "🌿" },
+        { min: 38, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🌹" }
+      ]
+    },
+    domates: {
+      ad: "Domates", ikon: "🍅", hasatGunu: 80,
+      fazlar: [
+        { min: 0,  max: 10,  ad: "Çimlenme",          rozet: "cimlenme",   ikon: "🌑" },
+        { min: 10, max: 30,  ad: "Fide",              rozet: "fide",       ikon: "🌱" },
+        { min: 30, max: 50,  ad: "Vejetatif",         rozet: "vejetatif",  ikon: "🌿" },
+        { min: 50, max: 65,  ad: "Çiçeklenme",        rozet: "vejetatif",  ikon: "🌼" },
+        { min: 65, max: 80,  ad: "Meyve Olgunlaşma",  rozet: "hasathazir", ikon: "🍅" },
+        { min: 80, max: 999, ad: "Hasada Hazır",      rozet: "hasathazir", ikon: "🍅" }
+      ]
+    },
+    biber: {
+      ad: "Biber", ikon: "🌶️", hasatGunu: 90,
+      fazlar: [
+        { min: 0,  max: 12,  ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 12, max: 35,  ad: "Fide",         rozet: "fide",       ikon: "🌱" },
+        { min: 35, max: 55,  ad: "Vejetatif",    rozet: "vejetatif",  ikon: "🌿" },
+        { min: 55, max: 75,  ad: "Çiçek/Meyve",  rozet: "vejetatif",  ikon: "🌼" },
+        { min: 75, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🌶️" }
+      ]
+    },
+    salatalik: {
+      ad: "Salatalık", ikon: "🥒", hasatGunu: 60,
+      fazlar: [
+        { min: 0,  max: 7,   ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 7,  max: 21,  ad: "Fide",         rozet: "fide",       ikon: "🌱" },
+        { min: 21, max: 40,  ad: "Vejetatif",    rozet: "vejetatif",  ikon: "🌿" },
+        { min: 40, max: 55,  ad: "Çiçek/Meyve",  rozet: "vejetatif",  ikon: "🌼" },
+        { min: 55, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🥒" }
+      ]
+    },
+    feslegen: {
+      ad: "Fesleğen", ikon: "🌿", hasatGunu: 55,
+      fazlar: [
+        { min: 0,  max: 10,  ad: "Çimlenme",       rozet: "cimlenme",   ikon: "🌑" },
+        { min: 10, max: 25,  ad: "Fide",           rozet: "fide",       ikon: "🌱" },
+        { min: 25, max: 45,  ad: "Vejetatif",      rozet: "vejetatif",  ikon: "🌿" },
+        { min: 45, max: 999, ad: "Sürekli Hasat",  rozet: "hasathazir", ikon: "🌿" }
+      ]
+    },
+    roka: {
+      ad: "Roka (Arugula)", ikon: "🌱", hasatGunu: 32,
+      fazlar: [
+        { min: 0,  max: 3,   ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 3,  max: 12,  ad: "Fide",         rozet: "fide",       ikon: "🌱" },
+        { min: 12, max: 32,  ad: "NFT Gelişim",  rozet: "vejetatif",  ikon: "🌿" },
+        { min: 32, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🌱" }
+      ]
+    },
+    ozel: {
+      ad: "Özel", ikon: "🌱", hasatGunu: 42,
+      fazlar: [
+        { min: 0,  max: 7,   ad: "Çimlenme",     rozet: "cimlenme",   ikon: "🌑" },
+        { min: 7,  max: 21,  ad: "Fide",         rozet: "fide",       ikon: "🌱" },
+        { min: 21, max: 35,  ad: "Vejetatif",    rozet: "vejetatif",  ikon: "🌿" },
+        { min: 35, max: 999, ad: "Hasada Hazır", rozet: "hasathazir", ikon: "🌱" }
+      ]
+    }
+  };
+
+  function bitkilerOku() {
+    try {
+      const raw = localStorage.getItem(BITKILER_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw) || {};
+    } catch (e) { return {}; }
+  }
+
+  function bitkilerYazLocal(map) {
+    try { localStorage.setItem(BITKILER_KEY, JSON.stringify(map)); } catch (e) {}
+  }
+
+  function bitkiYaz(id, obj) {
+    // 1) Yerel cache
+    const map = bitkilerOku();
+    map[id] = obj;
+    bitkilerYazLocal(map);
+    // 2) Firebase
+    try {
+      if (window.__firebaseDb && window.__firebaseRef && window.__firebaseSet) {
+        const r = window.__firebaseRef(window.__firebaseDb, `sera1/bitkiler/${id}`);
+        window.__firebaseSet(r, { ...obj, guncellemeZamani: Math.floor(Date.now()/1000) })
+          .catch(err => console.warn("Bitki Firebase'e yazılamadı:", err));
+      }
+    } catch (e) { console.warn("Bitki Firebase yazma hatası:", e); }
+  }
+
+  function bitkiSil(id) {
+    const map = bitkilerOku();
+    delete map[id];
+    bitkilerYazLocal(map);
+    try {
+      if (window.__firebaseDb && window.__firebaseRef && window.__firebaseSet) {
+        const r = window.__firebaseRef(window.__firebaseDb, `sera1/bitkiler/${id}`);
+        window.__firebaseSet(r, null).catch(err => console.warn("Bitki silinemedi:", err));
+      }
+    } catch (e) { console.warn("Bitki silme hatası:", e); }
+    bitkileriRender();
+  }
+
+  function bitkiGunHesapla(b) {
+    if (!b || !b.ayarTarihi) return null;
+    const baslangic = new Date(b.ayarTarihi);
+    const simdi = new Date();
+    const gunFark = Math.floor((simdi - baslangic) / 86400000);
+    return (b.bugunGun || 0) + gunFark;
+  }
+
+  function fazBulFazlar(fazlar, gun) {
+    for (const f of fazlar) {
+      if (gun >= f.min && gun < f.max) return f;
+    }
+    return fazlar[fazlar.length - 1];
+  }
+
+  function bitkiKartOlustur(id, b) {
+    const preset = PRESETLER[b.tip] || PRESETLER.ozel;
+    const fazlar = b.fazlar || preset.fazlar;
+    const ikon   = b.ikon  || preset.ikon;
+    const hasatGunu = b.hasatGunu || preset.hasatGunu;
+    const gun = bitkiGunHesapla(b);
+    
+    let kalanHTML, tarihHTML, yuzde, fazRozetHTML, ecOnerisi;
+    
+    if (gun === null) {
+      kalanHTML = "—"; tarihHTML = "Veri yok";
+      yuzde = 0;
+      fazRozetHTML = `<span class="hasat-faz-rozet hasat-faz-cimlenme">— Henüz başlamadı</span>`;
+      ecOnerisi = "—";
+    } else if (gun < 0) {
+      kalanHTML = `<span style="color:var(--muted)">Ekim Bekleniyor</span>`;
+      tarihHTML = `Ekimine ${Math.abs(gun)} gün kaldı`;
+      yuzde = 0;
+      fazRozetHTML = `<span class="hasat-faz-rozet hasat-faz-cimlenme">🌑 Hazırlık</span>`;
+      ecOnerisi = "0.0 EC (Hazırlık)";
+    } else {
+      const faz = fazBulFazlar(fazlar, gun);
+      const kalan = Math.max(0, hasatGunu - gun);
+      yuzde = Math.min(100, (gun / hasatGunu) * 100);
+      fazRozetHTML = `<span class="hasat-faz-rozet hasat-faz-${faz.rozet}">${faz.ikon} ${faz.ad}</span>`;
+      ecOnerisi = bitkiOptimalEc(b.ad, b.tip, gun);
+      
+      if (gun >= hasatGunu) {
+        kalanHTML = `<span style="color:var(--orange)">✂️ Hasat!</span>`;
+        tarihHTML = `${gun - hasatGunu} gün geçti`;
+      } else {
+        kalanHTML = `${kalan} gün`;
+        const t = new Date();
+        t.setDate(t.getDate() + kalan);
+        tarihHTML = t.toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
+      }
+    }
+
+    const tipEtiket = (b.tip && b.tip !== "ozel") ? (PRESETLER[b.tip]?.ad || "") : "";
+
+    return `
+      <div class="hasat-karti" data-id="${id}">
+        <div class="hasat-head">
+          <div class="bitki-head-isim">
+            <span class="bitki-emoji">${ikon}</span>
+            <span>${escapeHTML(b.ad || preset.ad)}</span>
+            ${tipEtiket ? `<span class="bitki-tip-tag">${tipEtiket}</span>` : ""}
+          </div>
+          <button class="bitki-menu-btn" onclick="bitkiMenuToggle('${id}', event)">⋯</button>
+        </div>
+        <div class="bitki-menu-pop" id="bitki-menu-${id}">
+          <button onclick="bitkiDuzenleAc('${id}')">✏️ Düzenle</button>
+          <button class="tehlike" onclick="bitkiSilOnay('${id}')">🗑 Sil</button>
+        </div>
+        <div class="hasat-progress">
+          <div class="hasat-progress-fill" style="width: ${yuzde}%"></div>
+        </div>
+        <div class="hasat-info">
+          <div class="hasat-info-item">
+            <div class="hasat-info-label">Şu an</div>
+            <div class="hasat-info-value buyuk">${gun !== null ? gun + ". gün" : "—"}</div>
+            ${fazRozetHTML}
+          </div>
+          <div class="hasat-info-item" style="text-align:right;">
+            <div class="hasat-info-label">Hasada Kalan</div>
+            <div class="hasat-info-value buyuk">${kalanHTML}</div>
+            <div class="hasat-info-label" style="margin-top:4px;">${tarihHTML}</div>
+            ${gun !== null ? `
+            <div style="font-size: 11px; margin-top: 6px; color: var(--green); font-weight: 700; background: rgba(52,199,89,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block;">
+              💧 ${ecOnerisi}
+            </div>
+            ` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bitkiOptimalEc(ad, tip, gun) {
+    if (gun === null) return "—";
+    const name = String(ad || "").toLowerCase();
+    const type = String(tip || "").toLowerCase();
+    
+    // Roka
+    if (name.includes("roka") || type.includes("roka")) {
+      if (gun < 3) return "0.0 EC (Sadece Su)";
+      if (gun < 12) return "0.5 - 0.8 EC";
+      if (gun < 30) return "1.0 - 1.2 EC";
+      return "1.2 EC";
+    }
+    // Marul / Kıvırcık / Göbekli
+    if (name.includes("marul") || name.includes("kıvırcık") || name.includes("kivircik") || type.includes("kivircik") || type.includes("gobekli")) {
+      if (gun < 3) return "0.0 EC (Sadece Su)";
+      if (gun < 14) return "0.5 - 0.8 EC";
+      if (gun < 21) return "0.8 EC";
+      if (gun < 35) return "1.0 - 1.2 EC";
+      return "1.2 - 1.4 EC";
+    }
+    // Fesleğen
+    if (name.includes("fesleğen") || name.includes("feslegen") || type.includes("feslegen")) {
+      if (gun < 5) return "0.0 EC (Sadece Su)";
+      if (gun < 14) return "0.5 - 0.8 EC";
+      if (gun < 21) return "0.8 EC";
+      if (gun < 42) return "1.0 - 1.2 EC";
+      return "1.4 - 1.6 EC";
+    }
+    // Diğer bitkiler için genel varsayılan
+    if (gun < 7) return "0.0 EC (Sadece Su)";
+    if (gun < 21) return "0.8 EC";
+    return "1.0 - 1.4 EC";
+  }
+
+  function escapeHTML(s) {
+    return String(s || "").replace(/[&<>"']/g, c => (
+      {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]
+    ));
+  }
+
+  function bitkileriRender() {
+    const map = bitkilerOku();
+    const ids = Object.keys(map);
+    const liste = document.getElementById("bitkiler-liste");
+    const bos   = document.getElementById("bitkiler-bos");
+    const ozet  = document.getElementById("bitkiler-ozet");
+    if (!liste) return;
+
+    if (ids.length === 0) {
+      liste.innerHTML = "";
+      if (bos) bos.style.display = "block";
+      if (ozet) ozet.textContent = "—";
+      return;
+    }
+    if (bos) bos.style.display = "none";
+
+    // Eskiden yeniye sıralı (oluşturma tarihi)
+    ids.sort((a,b) => (map[a].olusturma || 0) - (map[b].olusturma || 0));
+    liste.innerHTML = ids.map(id => bitkiKartOlustur(id, map[id])).join("");
+
+    // Özet
+    let hazir = 0, vej = 0, fide = 0;
+    ids.forEach(id => {
+      const b = map[id];
+      const preset = PRESETLER[b.tip] || PRESETLER.ozel;
+      const fazlar = b.fazlar || preset.fazlar;
+      const gun = bitkiGunHesapla(b);
+      if (gun === null) return;
+      const f = fazBulFazlar(fazlar, gun);
+      if (f.rozet === "hasathazir") hazir++;
+      else if (f.rozet === "vejetatif") vej++;
+      else if (f.rozet === "fide") fide++;
+    });
+    if (ozet) {
+      const parcalar = [`${ids.length} bitki`];
+      if (hazir) parcalar.push(`${hazir} hasada hazır`);
+      if (vej)   parcalar.push(`${vej} vejetatif`);
+      if (fide)  parcalar.push(`${fide} fide`);
+      ozet.textContent = parcalar.join(" · ");
+    }
+  }
+
+  // === Modal: ekle / düzenle ===
+  let __duzenleId = null;
+
+  function bitkiYeniAc() {
+    __duzenleId = null;
+    document.getElementById("bitki-modal-baslik").textContent = "🌱 Yeni Bitki Ekle";
+    document.getElementById("bitki-tip").value = "kivircik";
+    document.getElementById("bitki-ad").value  = "";
+    document.getElementById("bitki-gun").value = 0;
+    document.getElementById("bitki-hasat-gunu").value = PRESETLER.kivircik.hasatGunu;
+    bitkiTipiDegisti(); // bilgi panelini güncelle, hasat gününü presete göre ayarla
+    document.getElementById("bitki-modal").classList.add("acik");
+  }
+
+  function bitkiDuzenleAc(id) {
+    const map = bitkilerOku();
+    const b = map[id];
+    if (!b) return;
+    __duzenleId = id;
+    document.getElementById("bitki-modal-baslik").textContent = "✏️ Bitkiyi Düzenle";
+    document.getElementById("bitki-tip").value = b.tip || "ozel";
+    document.getElementById("bitki-ad").value  = b.ad || "";
+    document.getElementById("bitki-gun").value = bitkiGunHesapla(b) ?? (b.bugunGun || 0);
+    document.getElementById("bitki-hasat-gunu").value = b.hasatGunu || (PRESETLER[b.tip]?.hasatGunu || 42);
+    bitkiTipiBilgiYaz();
+    bitkiMenuKapat();
+    document.getElementById("bitki-modal").classList.add("acik");
+  }
+
+  function bitkiModalKapat() {
+    document.getElementById("bitki-modal").classList.remove("acik");
+  }
+
+  function bitkiTipiDegisti() {
+    const tip = document.getElementById("bitki-tip").value;
+    const preset = PRESETLER[tip] || PRESETLER.ozel;
+    // Yeni eklerken otomatik doldur, düzenlerken kullanıcı zaten girmiş olabilir, ezme:
+    if (!__duzenleId) {
+      document.getElementById("bitki-hasat-gunu").value = preset.hasatGunu;
+      if (!document.getElementById("bitki-ad").value) {
+        document.getElementById("bitki-ad").value = preset.ad;
+      }
+    }
+    bitkiTipiBilgiYaz();
+  }
+
+  function bitkiTipiBilgiYaz() {
+    const tip = document.getElementById("bitki-tip").value;
+    const preset = PRESETLER[tip] || PRESETLER.ozel;
+    const satirlar = preset.fazlar.map(f => {
+      const ust = (f.max >= 999) ? `${f.min}+ gün` : `${f.min}–${f.max} gün`;
+      return `${f.ikon} ${ust}: ${f.ad}`;
+    }).join("<br>");
+    document.getElementById("bitki-fazlar-bilgi").innerHTML =
+      `<strong>${preset.ikon} ${preset.ad} aşamaları:</strong><br>${satirlar}`;
+  }
+
+  function bitkiKaydet() {
+    const tip = document.getElementById("bitki-tip").value;
+    const preset = PRESETLER[tip] || PRESETLER.ozel;
+    const ad  = document.getElementById("bitki-ad").value.trim() || preset.ad;
+    const gun = parseInt(document.getElementById("bitki-gun").value) || 0;
+    const hasatGunu = parseInt(document.getElementById("bitki-hasat-gunu").value) || preset.hasatGunu;
+
+    const eski = __duzenleId ? bitkilerOku()[__duzenleId] : null;
+    const id = __duzenleId || ("b_" + Date.now().toString(36) + Math.random().toString(36).slice(2,6));
+
+    const obj = {
+      tip, ad, hasatGunu,
+      bugunGun: gun,
+      ayarTarihi: new Date().toISOString(),
+      ikon: preset.ikon,
+      olusturma: eski?.olusturma || Math.floor(Date.now()/1000)
+    };
+
+    bitkiYaz(id, obj);
+    bitkileriRender();
+    bitkiModalKapat();
+  }
+
+  function bitkiSilOnay(id) {
+    const map = bitkilerOku();
+    const ad = map[id]?.ad || "bu bitki";
+    if (confirm(`"${ad}" silinsin mi? Bu işlem geri alınamaz.`)) {
+      bitkiSil(id);
+    }
+    bitkiMenuKapat();
+  }
+
+  // 3-nokta menü aç/kapa
+  function bitkiMenuToggle(id, ev) {
+    if (ev) ev.stopPropagation();
+    const el = document.getElementById(`bitki-menu-${id}`);
+    if (!el) return;
+    document.querySelectorAll(".bitki-menu-pop.acik").forEach(p => {
+      if (p !== el) p.classList.remove("acik");
+    });
+    el.classList.toggle("acik");
+  }
+  function bitkiMenuKapat() {
+    document.querySelectorAll(".bitki-menu-pop.acik").forEach(p => p.classList.remove("acik"));
+  }
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".bitki-menu-pop") && !e.target.closest(".bitki-menu-btn")) {
+      bitkiMenuKapat();
+    }
+  });
+
+  // Eski tek-bitki ayarlarını otomatik aktar (eski sera_hasat_ayar varsa)
+  (function eskiVeriyiTasi() {
+    try {
+      const raw = localStorage.getItem("sera_hasat_ayar");
+      if (!raw) return;
+      if (Object.keys(bitkilerOku()).length > 0) return; // zaten yeni veri var
+      const eski = JSON.parse(raw);
+      if (!eski) return;
+      const id = "b_eski";
+      bitkiYaz(id, {
+        tip: "kivircik",
+        ad: eski.bitki || "Kıvırcık marul",
+        hasatGunu: eski.hasatGunu || 42,
+        bugunGun: eski.bugunGun || 0,
+        ayarTarihi: eski.ayarTarihi || new Date().toISOString(),
+        ikon: "🥬",
+        olusturma: Math.floor(Date.now()/1000)
+      });
+    } catch (e) {}
+  })();
+
+  window.bitkiYeniAc       = bitkiYeniAc;
+  window.bitkiDuzenleAc    = bitkiDuzenleAc;
+  window.bitkiModalKapat   = bitkiModalKapat;
+  window.bitkiTipiDegisti  = bitkiTipiDegisti;
+  window.bitkiKaydet       = bitkiKaydet;
+  window.bitkiSilOnay      = bitkiSilOnay;
+  window.bitkiMenuToggle   = bitkiMenuToggle;
+  window.bitkileriRender   = bitkileriRender;
+
+  setInterval(bitkileriRender, 60000); // dakikada bir gün/faz tazele
+  document.addEventListener("DOMContentLoaded", bitkileriRender);
+
+  // ============================================================
+  // MIN/MAX TAKİBİ — Bugün için
+  // ============================================================
+  const MINMAX_ANAHTAR = "sera_minmax";
+
+  function bugunStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  }
+
+  function minmaxOku() {
+    try {
+      const raw = localStorage.getItem(MINMAX_ANAHTAR);
+      if (!raw) return { tarih: bugunStr(), veriler: {} };
+      const obj = JSON.parse(raw);
+      // Gün değiştiyse sıfırla
+      if (obj.tarih !== bugunStr()) {
+        return { tarih: bugunStr(), veriler: {} };
+      }
+      return obj;
+    } catch (e) { return { tarih: bugunStr(), veriler: {} }; }
+  }
+
+  function minmaxGuncelle(key, deger) {
+    const obj = minmaxOku();
+    if (!obj.veriler[key]) {
+      obj.veriler[key] = { min: deger, max: deger, toplam: deger, sayim: 1 };
+    } else {
+      const v = obj.veriler[key];
+      if (deger < v.min) v.min = deger;
+      if (deger > v.max) v.max = deger;
+      v.toplam += deger;
+      v.sayim += 1;
+    }
+    try { localStorage.setItem(MINMAX_ANAHTAR, JSON.stringify(obj)); } catch (e) {}
+    return obj.veriler[key];
+  }
+
+  function minmaxOkuKey(key) {
+    const obj = minmaxOku();
+    return obj.veriler[key] || null;
+  }
+
+  // ============================================================
+  // GEÇMİŞ VERİ TAMPONU — Her sensör için son 60 değer (1 saat)
+  // ============================================================
+  const GECMIS_ANAHTAR = "sera_gecmis_tampon";
+  let gecmisTampon = {};
+  try {
+    const raw = localStorage.getItem(GECMIS_ANAHTAR);
+    if (raw) gecmisTampon = JSON.parse(raw);
+  } catch (e) {
+    console.warn("Geçmiş veri yüklenemedi:", e);
+  }
+
+  function gecmiseEkle(key, deger) {
+    if (!gecmisTampon[key]) gecmisTampon[key] = [];
+    gecmisTampon[key].push({ t: Date.now(), v: deger });
+    // 60 değer + son 1 saat
+    const limit = Date.now() - 3600000;
+    gecmisTampon[key] = gecmisTampon[key].filter(p => p.t >= limit).slice(-60);
+    try {
+      localStorage.setItem(GECMIS_ANAHTAR, JSON.stringify(gecmisTampon));
+    } catch (e) {}
+  }
+
+  // ============================================================
+  // GRAFIK MODAL — Karta tıklanınca açılır
+  // ============================================================
+  let grafikAcikSensor = null;
+  let grafikAcikMeta = null;   // sensorMeta'yı sakla, sensors array'ine bağımlılık yok
+
+  function grafikModalAc(sensorKey, sensorMeta, mevcutDeger) {
+    grafikAcikSensor = sensorKey;
+    grafikAcikMeta = sensorMeta;
+    document.getElementById("grafik-modal-baslik").textContent = `${sensorMeta.icon} ${sensorMeta.title}`;
+    document.getElementById("grafik-modal-deger").textContent = sensorMeta.fmt(mevcutDeger) + " " + sensorMeta.unit;
+
+    const status = sensorMeta.check(mevcutDeger);
+    const statusEl = document.getElementById("grafik-modal-status");
+    statusEl.textContent = "Durum: " + (status === "normal" ? "✓ Normal" :
+                                         status === "kritik" ? "⚠ Kritik" :
+                                         status === "yuksek" ? "↑ Yüksek" : "↓ Düşük");
+    statusEl.className = "status-" + status;
+
+    grafikModalGuncelle();
+    document.getElementById("grafik-modal").classList.add("acik");
+  }
+
+  function grafikModalKapat() {
+    grafikAcikSensor = null;
+    grafikAcikMeta = null;
+    document.getElementById("grafik-modal").classList.remove("acik");
+  }
+
+  function grafikModalGuncelle() {
+    if (!grafikAcikSensor || !grafikAcikMeta) return;
+    const sensor = grafikAcikMeta;
+    const mm = minmaxOkuKey(grafikAcikSensor);
+    if (mm) {
+      document.getElementById("grafik-min").textContent = sensor.fmt(mm.min);
+      document.getElementById("grafik-ort").textContent = sensor.fmt(mm.toplam / mm.sayim);
+      document.getElementById("grafik-max").textContent = sensor.fmt(mm.max);
+    }
+    document.getElementById("grafik-svg-wrap").innerHTML = grafikSVGOlustur(grafikAcikSensor, sensor);
+  }
+
+  function grafikSVGOlustur(key, sensor) {
+    const veri = gecmisTampon[key] || [];
+    if (veri.length < 2) {
+      return `<div style="height:120px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px;">Henüz yeterli veri yok (en az 2 okuma gerekir)</div>`;
+    }
+    const W = 460, H = 140, PAD = 20;
+    const minV = Math.min(...veri.map(p => p.v));
+    const maxV = Math.max(...veri.map(p => p.v));
+    const range = maxV - minV || 1;
+    const tMin = veri[0].t;
+    const tMax = veri[veri.length - 1].t;
+    const tRange = tMax - tMin || 1;
+
+    const noktalar = veri.map(p => {
+      const x = PAD + ((p.t - tMin) / tRange) * (W - 2 * PAD);
+      const y = H - PAD - ((p.v - minV) / range) * (H - 2 * PAD);
+      return [x, y];
+    });
+
+    const cizgi = noktalar.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+    const alan = "M" + PAD + "," + (H - PAD) + " " + cizgi + " L" + (W - PAD) + "," + (H - PAD) + " Z";
+
+    return `
+      <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="grafGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--green)" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="var(--green)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="${alan}" fill="url(#grafGrad)"/>
+        <path d="${cizgi}" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${noktalar.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2" fill="var(--green)"/>`).join("")}
+        <text x="${PAD}" y="${H - 4}" font-size="10" fill="var(--muted)">${sensor.fmt(minV)}</text>
+        <text x="${W - PAD}" y="${H - 4}" font-size="10" fill="var(--muted)" text-anchor="end">${sensor.fmt(maxV)}</text>
+      </svg>
+    `;
+  }
+
+  window.grafikModalKapat = grafikModalKapat;
+
+  // ============================================================
+  // BİLDİRİM SİSTEMİ
+  // ============================================================
+  const sonStatuler = {};   // { ec: "kritik", ... } — durum değişimini yakalamak için
+
+  // ============================================================
+  // SERVICE WORKER KAYDI — PWA + Push notification altyapısı
+  // ============================================================
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      // updateViaCache:'none' => sw.js dosyasının kendisi browser cache'inden DEĞİL,
+      // her zaman networkten kontrol edilir. Yeni deploy sonrası otomatik yakalanır.
+      navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+        .then(reg => {
+          window.__swReg = reg;
+          console.log("Service Worker kaydedildi");
+
+          // Yeni SW bulunduğunda tetiklenir
+          reg.addEventListener("updatefound", () => {
+            const yeni = reg.installing;
+            if (!yeni) return;
+            yeni.addEventListener("statechange", () => {
+              // Yeni SW kuruldu ve eski sürüm hâlâ kontrolde -> hemen aktive et
+              if (yeni.state === "installed" && navigator.serviceWorker.controller) {
+                yeni.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          });
+
+          // Sayfa açıkken arada bir güncelleme kontrolü (60 saniyede bir)
+          setInterval(() => { reg.update().catch(() => {}); }, 60000);
+
+          // Sayfa tekrar foreground'a gelince de bir kez kontrol et
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") reg.update().catch(() => {});
+          });
+        })
+        .catch(err => console.warn("Service Worker hatası:", err));
+
+      // Yeni SW kontrolü ele alınca sayfayı bir kez otomatik yenile (sonsuz döngü olmasın)
+      let yenilendi = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (yenilendi) return;
+        yenilendi = true;
+        window.location.reload();
+      });
+    });
+  }
+
+  async function bildirimIzni() {
+    if (!("Notification" in window)) {
+      bildirimGoster("Bu tarayıcı bildirimi desteklemiyor", true);
+      return;
+    }
+    if (!("serviceWorker" in navigator)) {
+      bildirimGoster("Service Worker desteği yok", true);
+      return;
+    }
+    if (Notification.permission === "denied") {
+      bildirimGoster("Bildirim izni reddedilmiş. Tarayıcı ayarlarından açabilirsin.", true);
+      return;
+    }
+
+    let perm = Notification.permission;
+    if (perm !== "granted") {
+      perm = await Notification.requestPermission();
+    }
+    if (perm !== "granted") {
+      bildirimGoster("Bildirim izni verilmedi", true);
+      return;
+    }
+
+    // iOS PWA için: kullanıcı önce Ana Ekrana eklemeli
+    const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+                       window.navigator.standalone === true;
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (iOS && !standalone) {
+      bildirimGoster("iOS'ta arka plan bildirimi için: Safari → Paylaş → Ana Ekrana Ekle yapmalısın", true);
+      return;
+    }
+
+    // Service Worker hazır olsun
+    const reg = await navigator.serviceWorker.ready;
+
+    // Cihazı Firebase'e kaydet (ESP bunu okuyup push gönderecek)
+    const cihazId = window.__cihazId || (window.__cihazId = "cihaz-" + Math.random().toString(36).slice(2, 10));
+    try {
+      // Web Push API üzerinden subscription al (VAPID key gerekir; ESP entegrasyonunda kullanılacak)
+      bildirimGoster("✓ Bildirimler açık. Test bildirimi gönderiliyor...", false);
+
+      // Service Worker üzerinden test bildirim
+      reg.showNotification("🌱 Sera Bildirimleri Aktif", {
+        body: "Artık kritik durumlarda bildirim alacaksın. Uygulama kapalıyken de çalışır (ESP devreye girince).",
+        icon: "icon.svg",
+        badge: "icon.svg",
+        tag: "sera-test"
+      });
+
+      // Cihaz bilgisi Firebase'e — ESP buradan okur
+      if (window.__firebaseDb && window.__firebaseRef && window.__firebaseSet) {
+        const tokenRef = window.__firebaseRef(window.__firebaseDb, `sera1/cihazlar/${cihazId}`);
+        await window.__firebaseSet(tokenRef, {
+          ad: "Telefonum",
+          tip: iOS ? "ios" : (/android/i.test(navigator.userAgent) ? "android" : "desktop"),
+          standalone: standalone,
+          kayitZamani: Math.floor(Date.now() / 1000),
+          aktif: true
+        });
+      }
+    } catch (e) {
+      console.warn("Bildirim kayıt hatası:", e);
+    }
+  }
+  window.bildirimIzni = bildirimIzni;
+
+  function bildirimGoster(mesaj, kritik) {
+    const banner = document.getElementById("bildirim-banner");
+    document.getElementById("bildirim-mesaj").textContent = mesaj;
+    banner.style.background = kritik ? "var(--red)" : "var(--blue)";
+    banner.classList.add("acik");
+    setTimeout(() => banner.classList.remove("acik"), 6000);
+  }
+
+  function bildirimKapat() {
+    document.getElementById("bildirim-banner").classList.remove("acik");
+  }
+  window.bildirimKapat = bildirimKapat;
+
+  function durumKontrolEt(sensorKey, sensorMeta, deger, status) {
+    const onceki = sonStatuler[sensorKey];
+    sonStatuler[sensorKey] = status;
+    // İlk okumada bildirim verme
+    if (onceki === undefined) return;
+    // Aynı durumdaysa bildirim verme
+    if (onceki === status) return;
+    // Sadece kritike GİRİŞTE bildirim ver
+    if (status !== "kritik") return;
+
+    const mesaj = `⚠ ${sensorMeta.title}: ${sensorMeta.fmt(deger)}${sensorMeta.unit} — KRİTİK`;
+    bildirimGoster(mesaj, true);
+
+    // Browser notification (eğer izin varsa)
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification("🚨 Sera Uyarısı", {
+          body: `${sensorMeta.title}: ${sensorMeta.fmt(deger)}${sensorMeta.unit} kritik seviyeye ulaştı.`,
+          tag: "sera-" + sensorKey,
+          requireInteraction: false
+        });
+      } catch (e) {}
+    }
+  }
+
+  // Modül scriptin (Firebase) erişebilmesi için window'a aç
+  window.minmaxGuncelle = minmaxGuncelle;
+  window.minmaxOkuKey = minmaxOkuKey;
+  window.gecmiseEkle = gecmiseEkle;
+  window.grafikModalAc = grafikModalAc;
+  window.grafikModalGuncelle = grafikModalGuncelle;
+  window.durumKontrolEt = durumKontrolEt;
+</script>
+
+<script type="module">
+  // ============================================================
+  // FIREBASE YAPILANDIRMASI - Buraya kendi değerlerinizi yazın
+  // ============================================================
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCoR1nVkV9KGLuavQMXz8LIqcFRsRxS4b8",
+    authDomain: "planet-free.firebaseapp.com",
+    databaseURL: "https://planet-free-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "planet-free",
+    storageBucket: "planet-free.firebasestorage.app",
+    messagingSenderId: "628949178857",
+    appId: "1:628949178857:web:da39ce36f26d883d6b5378"
+  };
+
+  // Yapılandırma yapılmamışsa banner göster
+  if (FIREBASE_CONFIG.apiKey.startsWith("BURAYA")) {
+    document.getElementById("config-banner").style.display = "block";
+  }
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db  = getDatabase(app);
+  const guncelRef = ref(db, "sera1/guncel");
+
+  // Klasik scriptin kullanması için window'a expose et
+  window.__firebaseDb = db;
+  window.__firebaseRef = ref;
+  window.__firebaseSet = set;
+
+  // ============================================================
+  // BİTKİLERİM — Cihazlar arası senkron
+  // Başka bir cihazda bitki eklenir/düzenlenir/silinirse bu cihaz da
+  // anında güncellensin diye Firebase'i dinliyoruz.
+  // ============================================================
+  const bitkilerRef = ref(db, "sera1/bitkiler");
+  onValue(bitkilerRef, (snap) => {
+    const v = snap.val();
+    try {
+      // Firebase'den gelen tam liste — yerel cache'i bununla eşitle.
+      // null/yoksa boş obje. Karşılaştırıp gereksiz render'a girmeyelim.
+      const yeni = v || {};
+      const eskiRaw = localStorage.getItem("sera_bitkiler") || "{}";
+      if (eskiRaw === JSON.stringify(yeni)) return;
+      localStorage.setItem("sera_bitkiler", JSON.stringify(yeni));
+      if (typeof window.bitkileriRender === "function") {
+        window.bitkileriRender();
+      }
+    } catch (e) {
+      console.warn("Bitkiler senkron hatası:", e);
+    }
+  });
+
+  // ============================================================
+  // AKTİF DÖNGÜ PLANI — Cihazlar arası senkron
+  // ============================================================
+  const aktifPlanRef = ref(db, "sera1/aktif_plan");
+  onValue(aktifPlanRef, (snap) => {
+    const v = snap.val();
+    try {
+      localStorage.setItem("sera_aktif_plan", JSON.stringify(v));
+      if (typeof window.aktifDonguRender === "function") {
+        window.aktifDonguRender(v);
+      }
+    } catch (e) {
+      console.warn("Aktif plan senkron hatası:", e);
+    }
+  });
+
+  // ============================================================
+  // EŞİKLER — Cihazlar arası senkron
+  // ============================================================
+  const esiklerRef = ref(db, "sera1/esikler");
+  onValue(esiklerRef, (snap) => {
+    const v = snap.val();
+    if (v) {
+      window.__esikler = v;
+      // UI input alanlarını doldur
+      const fields = {
+        "esik-sicaklik-min": v.havaSicaklikMin,
+        "esik-sicaklik-max": v.havaSicaklikMax,
+        "esik-nem-min": v.havaNemMin,
+        "esik-nem-max": v.havaNemMax,
+        "esik-ec-min": v.ecMin,
+        "esik-ec-max": v.ecMax,
+        "esik-ph-min": v.phMin,
+        "esik-ph-max": v.phMax
+      };
+      for (const [id, val] of Object.entries(fields)) {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.value = val;
+      }
+    }
+  });
+
+  // ============================================================
+  // KURALLAR (OTOMASYON / MANUEL MOD)
+  // ============================================================
+  const kurallarRef = ref(db, "sera1/kurallar");
+  onValue(kurallarRef, (snap) => {
+    const v = snap.val();
+    if (v) {
+      if (v.isik) {
+        const isOto = v.isik.aktif;
+        const btnOto = document.getElementById("mod-isik-oto");
+        const btnMan = document.getElementById("mod-isik-man");
+        if (btnOto && btnMan) {
+          btnOto.classList.toggle("active", isOto);
+          btnMan.classList.toggle("active", !isOto);
+        }
+      }
+      if (v.sirkulasyon) {
+        const isOto = v.sirkulasyon.aktif;
+        const btnOto = document.getElementById("mod-motor-oto");
+        const btnMan = document.getElementById("mod-motor-man");
+        if (btnOto && btnMan) {
+          btnOto.classList.toggle("active", isOto);
+          btnMan.classList.toggle("active", !isOto);
+        }
+      }
+    }
+  });
+
+  const sensors = [
+    { key: "havaSicaklik", title: "Hava Sıcaklığı",  unit: "°C",     icon: "🌡️", check: havaSicaklikCheck, fmt: v => v.toFixed(1) },
+    { key: "havaNem",      title: "Hava Nemi",       unit: "%",      icon: "💧", check: havaNemCheck,      fmt: v => v.toFixed(0) },
+    { key: "suSicaklik",   title: "Su Sıcaklığı",    unit: "°C",     icon: "🌊", check: suSicaklikCheck,   fmt: v => v.toFixed(1) },
+    { key: "suSeviyesi",   title: "Su Seviyesi",     unit: "%",      icon: "🪣", check: suSeviyeCheck,     fmt: v => v.toString() },
+    { key: "ec",           title: "EC",              unit: "mS/cm",  icon: "⚡", check: ecCheck,           fmt: v => v.toFixed(2) },
+    { key: "ph",           title: "pH",              unit: "",       icon: "🧪", check: phCheck,           fmt: v => v.toFixed(2) },
+    { key: "isik",         title: "Işık",            unit: "lux",    icon: "☀️", check: isikCheck,         fmt: v => v.toFixed(0) },
+    { key: "toprakNem",    title: "Toprak Nemi",     unit: "%",      icon: "🌱", check: toprakNemCheck,    fmt: v => v.toString() }
+  ];
+
+  // Kıvırcık marul için optimal: 15-22°C gündüz, 10-15°C gece
+  // Kritik: <10°C (donma riski) veya >28°C (bolting/çiçeklenme)
+  function havaSicaklikCheck(v) {
+    const esik = window.__esikler || {};
+    const minKritik = esik.havaSicaklikKritikMin ?? 10;
+    const minNormal = esik.havaSicaklikMin ?? 15;
+    const maxKritik = esik.havaSicaklikKritikMax ?? 28;
+    const maxNormal = esik.havaSicaklikMax ?? 25;
+    if (v < minKritik) return "kritik";
+    if (v < minNormal) return "dusuk";
+    if (v > maxKritik) return "kritik";
+    if (v > maxNormal) return "yuksek";
+    return "normal";
+  }
+  function havaNemCheck(v) {
+    const esik = window.__esikler || {};
+    const minNormal = esik.havaNemMin ?? 50;
+    const maxNormal = esik.havaNemMax ?? 85;
+    if (v < minNormal) return "dusuk";
+    if (v > maxNormal) return "yuksek";
+    return "normal";
+  }
+  // Kıvırcık NFT için: optimal 18-22°C, max 22 yüksek, >24 kritik (bolting + DO düşer)
+  function suSicaklikCheck(v) {
+    const esik = window.__esikler || {};
+    const minNormal = esik.suSicaklikMin ?? 16;
+    const maxKritik = esik.suSicaklikKritikMax ?? 24;
+    const maxNormal = esik.suSicaklikMax ?? 22;
+    if (v < minNormal) return "dusuk";
+    if (v > maxKritik) return "kritik";
+    if (v > maxNormal) return "yuksek";
+    return "normal";
+  }
+  function suSeviyeCheck(v) {
+    const esik = window.__esikler || {};
+    const minKritik = esik.suSeviyesiKritikMin ?? 20;
+    const minNormal = esik.suSeviyesiMin ?? 40;
+    if (v < minKritik) return "kritik";
+    if (v < minNormal) return "dusuk";
+    return "normal";
+  }
+  function ecCheck(v) {
+    const esik = window.__esikler || {};
+    const minKritik = esik.ecKritikMin ?? 0.8;
+    const maxKritik = esik.ecKritikMax ?? 2.0;
+    const minNormal = esik.ecMin ?? 1.2;
+    const maxNormal = esik.ecMax ?? 1.8;
+    if (v < minKritik) return "dusuk";
+    if (v > maxKritik) return "kritik";
+    if (v < minNormal || v > maxNormal) return "yuksek";
+    return "normal";
+  }
+  function phCheck(v) {
+    const esik = window.__esikler || {};
+    const minKritik = esik.phKritikMin ?? 5.4;
+    const maxKritik = esik.phKritikMax ?? 6.6;
+    const minNormal = esik.phMin ?? 5.8;
+    const maxNormal = esik.phMax ?? 6.2;
+    if (v < minKritik || v > maxKritik) return "kritik";
+    if (v < minNormal || v > maxNormal) return "yuksek";
+    return "normal";
+  }
+  function isikCheck(v) {
+    const esik = window.__esikler || {};
+    const minNormal = esik.isikMin ?? 8000;
+    const maxNormal = esik.isikMax ?? 50000;
+    if (v < minNormal) return "dusuk";
+    if (v > maxNormal) return "yuksek";
+    return "normal";
+  }
+  function toprakNemCheck(v) {
+    const esik = window.__esikler || {};
+    const minKritik = esik.toprakNemKritikMin ?? 30;
+    const minNormal = esik.toprakNemMin ?? 50;
+    if (v < minKritik) return "kritik";
+    if (v < minNormal) return "dusuk";
+    return "normal";
+  }
+
+  const statusText = {
+    normal: "Normal", dusuk: "Düşük", yuksek: "Yüksek", kritik: "Kritik"
+  };
+
+  const grid = document.getElementById("grid");
+  const oncekiDegerler = {};   // trend hesaplama için son değerleri tutar
+
+  function trendHesapla(key, yeniDeger) {
+    const eski = oncekiDegerler[key];
+    if (eski === undefined) return null;
+    const fark = yeniDeger - eski;
+    // Çok küçük farkları "sabit" say
+    const esik = Math.abs(yeniDeger) * 0.005 + 0.05;  // %0.5 + 0.05 minimum
+    if (Math.abs(fark) < esik) return { yon: "sabit", miktar: 0 };
+    return { yon: fark > 0 ? "yukari" : "asagi", miktar: Math.abs(fark) };
+  }
+
+  function trendHTML(trend, fmt) {
+    if (!trend) return "";
+    const ok = trend.yon === "yukari" ? "↑" : trend.yon === "asagi" ? "↓" : "→";
+    const metin = trend.yon === "sabit" ? "sabit" : fmt(trend.miktar);
+    return `<span class="trend ${trend.yon}">${ok} ${metin}</span>`;
+  }
+
+  function render(data, gercekVeri) {
+    // gercekVeri=false ise placeholder, min/max ve trend'i bozmasın
+    if (gercekVeri === undefined) gercekVeri = true;
+    grid.innerHTML = "";
+    let kritikVar = false;
+    sensors.forEach(s => {
+      let v = data[s.key];
+      if (v === undefined || v === null) return;
+      // ESP bazen virgüllü string gönderir ("21,7") — sayıya çevir
+      if (typeof v === "string") { v = parseFloat(v.replace(",", ".")); }
+      if (isNaN(v)) return;
+      const status = s.check(v);
+      if (status === "kritik" && gercekVeri) kritikVar = true;
+
+      const trend = gercekVeri ? trendHesapla(s.key, v) : null;
+      const trendBadge = trendHTML(trend, s.fmt);
+      if (gercekVeri) oncekiDegerler[s.key] = v;
+
+      // Sadece gerçek veri için min/max ve geçmiş tut
+      let mm = null;
+      if (gercekVeri) {
+        mm = window.minmaxGuncelle ? window.minmaxGuncelle(s.key, v) : null;
+        if (window.gecmiseEkle) window.gecmiseEkle(s.key, v);
+        // Bildirim kontrolü sadece gerçek veride
+        if (window.durumKontrolEt) window.durumKontrolEt(s.key, s, v, status);
+      } else {
+        mm = window.minmaxOkuKey ? window.minmaxOkuKey(s.key) : null;
+      }
+
+      let mmHTML = "";
+      if (mm) {
+        let mMin = mm.min;
+        let mMax = mm.max;
+        if (typeof mMin === "string") mMin = parseFloat(mMin.replace(",", "."));
+        if (typeof mMax === "string") mMax = parseFloat(mMax.replace(",", "."));
+        if (!isNaN(mMin) && !isNaN(mMax)) {
+          mmHTML = `<div class="card-minmax">
+             <span>↓ Min <b>${s.fmt(mMin)}</b></span>
+             <span style="margin-left:auto;">↑ Max <b>${s.fmt(mMax)}</b></span>
+           </div>`;
+        }
+      }
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.dataset.sensorKey = s.key;
+      card.innerHTML = `
+        <div class="card-head">
+          <span class="card-icon">${s.icon}</span>
+          <span class="badge-dot ${status}"></span>
+        </div>
+        <div class="card-title">${s.title}</div>
+        <div>
+          <span class="card-value">${s.fmt(v)}</span>
+          <span class="card-unit">${s.unit}</span>
+          ${trendBadge}
+        </div>
+        <div class="card-status status-${status}">${statusText[status]}</div>
+        ${mmHTML}
+      `;
+      card.addEventListener("click", () => {
+        if (window.grafikModalAc) window.grafikModalAc(s.key, s, v);
+      });
+      grid.appendChild(card);
+    });
+
+    // Kritik durum varsa saat kartını uyar
+    const saatKarti = document.getElementById("saat-karti");
+    if (kritikVar) saatKarti.classList.add("kritik");
+    else           saatKarti.classList.remove("kritik");
+
+    // Eğer modal açıksa, açık olan sensörün grafiğini de güncelle
+    if (window.grafikModalGuncelle) window.grafikModalGuncelle();
+  }
+
+  function setOnline(state, ts) {
+    // state: "online" | "waiting" | "offline"
+    const dot = document.getElementById("durum-dot");
+    const txt = document.getElementById("durum-text");
+    const espSaat = document.getElementById("esp-saat");
+    const espFark = document.getElementById("esp-fark");
+
+    dot.classList.remove("off", "wait");
+
+    if (state === "online") {
+      txt.textContent = "Bağlı";
+      if (ts) {
+        const d = new Date(ts * 1000);
+        const ss = d.getHours().toString().padStart(2, "0");
+        const dk = d.getMinutes().toString().padStart(2, "0");
+        const sn = d.getSeconds().toString().padStart(2, "0");
+        espSaat.textContent = `${ss}:${dk}:${sn}`;
+        window.__sonEspZamani = ts;  // canlı saat döngüsü "X dk önce" yazdırır
+      }
+    } else if (state === "waiting") {
+      dot.classList.add("wait");
+      txt.textContent = "Bağlı — veri bekleniyor";
+      espSaat.textContent = "—";
+      espFark.textContent = "veri yok";
+      window.__sonEspZamani = null;
+    } else {
+      dot.classList.add("off");
+      txt.textContent = "Bağlantı yok";
+      espSaat.textContent = "—";
+      espFark.textContent = "—";
+      window.__sonEspZamani = null;
+    }
+  }
+
+  // Yapılandırma yoksa demo veri göster
+  if (FIREBASE_CONFIG.apiKey.startsWith("BURAYA")) {
+    const demo = {
+      havaSicaklik: 23.4, havaNem: 67, suSicaklik: 20.1, suSeviyesi: 82,
+      ec: 1.45, ph: 5.95, isik: 18500, toprakNem: 72,
+      guncellemeZamani: Math.floor(Date.now() / 1000)
+    };
+    render(demo);
+    setOnline("offline");
+  } else {
+    // Boş ekrana ilk olarak demo veri çiz (kart düzeni görünsün) — min/max'a yazmaz
+    render({
+      havaSicaklik: 0, havaNem: 0, suSicaklik: 0, suSeviyesi: 0,
+      ec: 0, ph: 0, isik: 0, toprakNem: 0
+    }, false);   // false = "iz bırakma, sadece görsel"
+    setOnline("waiting");
+
+    onValue(guncelRef, (snap) => {
+      const v = snap.val();
+      if (v) {
+        render(v, true);   // true = "gerçek veri, min/max g��ncellesin"
+        setOnline("online", v.guncellemeZamani);
+      } else {
+        setOnline("waiting");
+      }
+    }, (err) => {
+      setOnline("offline");
+      document.getElementById("durum-text").textContent = "Hata: " + err.message;
+    });
+  }
+  // ============================================================
+  // SEKME YÖNETİMİ (BOTTOM NAV)
+  // ============================================================
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-view').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ============================================================
+  // AKTÜATÖRLER & DOZAJLAMA & ZAMANLAYICI
+  // ============================================================
+  function aktorDegistir(aktorId, durum) {
+    if (!window.__firebaseDb || !window.__firebaseSet || !window.__firebaseRef) {
+      document.getElementById("switch-" + aktorId).checked = !durum;
+      return alert("Firebase bağlantısı yok!");
+    }
+    const r = window.__firebaseRef(window.__firebaseDb, `sera1/aktorler/${aktorId}`);
+    window.__firebaseSet(r, durum).then(() => {
+      const kart = document.getElementById("kart-" + aktorId);
+      const ikon = document.getElementById("ikon-" + aktorId);
+      if (durum) {
+        kart.classList.add("aktif");
+        if (aktorId === "motor") ikon.classList.add("donen");
+      } else {
+        kart.classList.remove("aktif");
+        ikon.classList.remove("donen");
+      }
+    }).catch(e => {
+      console.error(e);
+      document.getElementById("switch-" + aktorId).checked = !durum;
+    });
+  }
+
+  function dozajVer(pompa, ml) {
+    if (!window.__firebaseDb || !window.__firebaseSet || !window.__firebaseRef) return;
+    const r = window.__firebaseRef(window.__firebaseDb, `sera1/dozaj/${pompa}`);
+    window.__firebaseSet(r, { hedef_ml: ml, tetikle: true, zaman: Math.floor(Date.now()/1000) })
+      .then(() => alert(`${ml} ml ${pompa} verildi.`));
+  }
+
+  function ozelDozajVer(pompa) {
+    const ml = parseFloat(document.getElementById("input-" + pompa).value);
+    if (isNaN(ml) || ml <= 0) return alert("Geçerli bir miktar girin.");
+    dozajVer(pompa, ml);
+    document.getElementById("input-" + pompa).value = "";
+  }
+
+  function timerKaydet(tip) {
+    if (!window.__firebaseDb || !window.__firebaseSet || !window.__firebaseRef) return;
+    const r = window.__firebaseRef(window.__firebaseDb, `sera1/timer/${tip}`);
+    let data = {};
+    if (tip === "isik") {
+      data = { ac: document.getElementById("timer-isik-ac").value, kapat: document.getElementById("timer-isik-kapat").value };
+    } else if (tip === "motor") {
+      data = { calis: document.getElementById("timer-motor-calis").value, bekle: document.getElementById("timer-motor-bekle").value };
+    }
+    window.__firebaseSet(r, data).then(() => alert("Ayarlar kaydedildi."));
+  }
+
+  function esikleriKaydet() {
+    if (!db || !set || !ref) return;
+    const guncelEsikler = { ...(window.__esikler || {}) };
+    
+    guncelEsikler.havaSicaklikMin = parseFloat(document.getElementById("esik-sicaklik-min").value);
+    guncelEsikler.havaSicaklikMax = parseFloat(document.getElementById("esik-sicaklik-max").value);
+    guncelEsikler.havaNemMin = parseFloat(document.getElementById("esik-nem-min").value);
+    guncelEsikler.havaNemMax = parseFloat(document.getElementById("esik-nem-max").value);
+    guncelEsikler.ecMin = parseFloat(document.getElementById("esik-ec-min").value);
+    guncelEsikler.ecMax = parseFloat(document.getElementById("esik-ec-max").value);
+    guncelEsikler.phMin = parseFloat(document.getElementById("esik-ph-min").value);
+    guncelEsikler.phMax = parseFloat(document.getElementById("esik-ph-max").value);
+    
+    if (Object.values(guncelEsikler).some(isNaN)) {
+      return alert("Lütfen tüm eşik değerlerini geçerli sayılar olarak girin.");
+    }
+    
+    guncelEsikler.havaSicaklikKritikMin = guncelEsikler.havaSicaklikMin - 5;
+    guncelEsikler.havaSicaklikKritikMax = guncelEsikler.havaSicaklikMax + 3;
+    guncelEsikler.ecKritikMin = guncelEsikler.ecMin - 0.4;
+    guncelEsikler.ecKritikMax = guncelEsikler.ecMax + 0.2;
+    guncelEsikler.phKritikMin = guncelEsikler.phMin - 0.4;
+    guncelEsikler.phKritikMax = guncelEsikler.phMax + 0.4;
+
+    const r = ref(db, "sera1/esikler");
+    set(r, guncelEsikler)
+      .then(() => alert("Eşik değerleri başarıyla güncellendi."))
+      .catch(e => alert("Hata: " + e.message));
+  }
+
+  function modDegistir(aktorId, mod) {
+    if (!db || !set || !ref) return;
+    const path = aktorId === "isik" ? "sera1/kurallar/isik/aktif" : "sera1/kurallar/sirkulasyon/aktif";
+    const refPath = ref(db, path);
+    const isOto = mod === "oto";
+    set(refPath, isOto).catch(e => alert("Hata: " + e.message));
+  }
+
+  if (typeof onValue !== "undefined" && typeof window.__firebaseRef !== "undefined" && window.__firebaseDb) {
+    // Aktor durumunu dinle
+    onValue(window.__firebaseRef(window.__firebaseDb, 'sera1/aktorler'), (snap) => {
+      const v = snap.val();
+      if (v) {
+        if (v.motor !== undefined) {
+          document.getElementById("switch-motor").checked = v.motor;
+          const kart = document.getElementById("kart-motor");
+          const ikon = document.getElementById("ikon-motor");
+          if (v.motor) { kart.classList.add("aktif"); ikon.classList.add("donen"); }
+          else { kart.classList.remove("aktif"); ikon.classList.remove("donen"); }
+        }
+        if (v.isik !== undefined) {
+          document.getElementById("switch-isik").checked = v.isik;
+          const kart = document.getElementById("kart-isik");
+          if (v.isik) kart.classList.add("aktif");
+          else kart.classList.remove("aktif");
+        }
+      }
+    });
+    // Timer verilerini dinle
+    onValue(window.__firebaseRef(window.__firebaseDb, 'sera1/timer'), (snap) => {
+      const v = snap.val();
+      if (v) {
+        if (v.isik) {
+          document.getElementById("timer-isik-ac").value = v.isik.ac || "";
+          document.getElementById("timer-isik-kapat").value = v.isik.kapat || "";
+        }
+        if (v.motor) {
+          document.getElementById("timer-motor-calis").value = v.motor.calis || "";
+          document.getElementById("timer-motor-bekle").value = v.motor.bekle || "";
+        }
+      }
+    });
+  }
+
+  let currentDisplayDate = new Date();
+  let activeCycleStartDate = null;
+
+  function hesaplaTakvim() {
+    const baslangicInput = document.getElementById("takvim-baslangic").value;
+    if (!baslangicInput) {
+      alert("Lütfen bir başlangıç tarihi seçin.");
+      return;
+    }
+    
+    const hasMarul = document.getElementById("chk-marul").checked;
+    const hasFeslegen = document.getElementById("chk-feslegen").checked;
+    const hasRoka = document.getElementById("chk-roka").checked;
+    
+    if (!hasMarul && !hasFeslegen && !hasRoka) {
+      alert("Lütfen en az bir bitki seçin.");
+      return;
+    }
+    
+    activeCycleStartDate = new Date(baslangicInput);
+    currentDisplayDate = new Date(activeCycleStartDate); // display month of start date
+    
+    // Show results section
+    document.getElementById("takvim-sonuc").style.display = "block";
+    
+    cizTakvimIzgara();
+  }
+
+  function oncekiAy() {
+    currentDisplayDate.setMonth(currentDisplayDate.getMonth() - 1);
+    cizTakvimIzgara();
+  }
+
+  function sonrakiAy() {
+    currentDisplayDate.setMonth(currentDisplayDate.getMonth() + 1);
+    cizTakvimIzgara();
+  }
+
+  function getPlanDataForDay(cycleDay) {
+    if (cycleDay < 0) return null;
+    
+    const hasMarul = document.getElementById("chk-marul").checked;
+    const hasFeslegen = document.getElementById("chk-feslegen").checked;
+    const hasRoka = document.getElementById("chk-roka").checked;
+    const hasBaseCrops = hasMarul || hasFeslegen;
+    
+    const maxDays = hasFeslegen ? 48 : 42;
+    const totalPlanGunu = hasBaseCrops ? maxDays : 32;
+    
+    if (cycleDay >= totalPlanGunu) return null;
+    
+    let events = [];
+    let desc = [];
+    let ec = "0.0 EC (Sadece Su)";
+    
+    // Tank EC recommendation logic
+    if (hasBaseCrops) {
+      if (cycleDay >= 0 && cycleDay < 3) {
+        ec = "0.0 EC (Sadece Su)";
+      } else if (cycleDay >= 3 && cycleDay < 14) {
+        ec = "0.5 - 0.8 EC";
+      } else if (cycleDay >= 14 && cycleDay < 21) {
+        ec = "0.8 EC";
+      } else if (cycleDay >= 21 && cycleDay < 42) {
+        ec = "1.0 - 1.2 EC";
+      } else {
+        ec = "1.4 - 1.6 EC"; // Fesleğen periyodik kesim rejiminde yüksek EC
+      }
+    } else if (hasRoka) {
+      // Only Roka cycle (Day 0 to 32)
+      if (cycleDay >= 0 && cycleDay < 3) {
+        ec = "0.0 EC (Sadece Su)";
+      } else if (cycleDay >= 3 && cycleDay < 12) {
+        ec = "0.5 - 0.8 EC";
+      } else if (cycleDay >= 12 && cycleDay < 30) {
+        ec = "1.0 - 1.2 EC";
+      } else {
+        ec = "1.2 EC";
+      }
+    }
+    
+    // Marul Olayları
+    if (hasMarul) {
+      if (cycleDay === 0) {
+        events.push("ekim");
+        desc.push("🥬 <strong>Marul Ekim:</strong> Tohumları viyollere ekin (EC: 0.0, pH: 5.8).");
+      }
+      if (cycleDay === 3) {
+        events.push("isik");
+        desc.push("💡 <strong>Marul Işık Açılışı:</strong> Çimlenme tamamlandı, LED grow ışıklarını açın.");
+      }
+      if (cycleDay === 15) {
+        events.push("transfer");
+        desc.push("🚚 <strong>Marul Transferi:</strong> Marul fidelerini ana NFT kanallarına aktarın (EC: 0.8, pH: 5.8-6.0).");
+      }
+      if (cycleDay === 42) {
+        events.push("hasat");
+        desc.push("🧺 <strong>Marul Hasat Günü:</strong> Marulları kökleriyle sökerek hasat edin.");
+      }
+    }
+    
+    // Fesleğen Olayları
+    if (hasFeslegen) {
+      if (cycleDay === 0) {
+        events.push("ekim");
+        desc.push("🌿 <strong>Fesleğen Ekim:</strong> Tohumları viyollere ekin. Çimlenme sıcaklığı ~25°C.");
+      }
+      if (cycleDay === 3) {
+        events.push("isik");
+        desc.push("💡 <strong>Fesleğen Işık Açılışı:</strong> Çimlenme tamamlandı, LED grow ışıklarını açın.");
+      }
+      if (cycleDay === 15) {
+        events.push("transfer");
+        desc.push("🚚 <strong>Fesleğen Transferi:</strong> Fesleğen fidelerini ana NFT kanallarına aktarın (EC: 0.8, pH: 5.8-6.0).");
+      }
+      if (cycleDay === 30) {
+        events.push("budama");
+        desc.push("✂️ <strong>Fesleğen Tepe Alma:</strong> 4-6 çift yaprağa ulaşan fesleğenlerin üst sürgünlerini keserek dallanmayı teşvik edin.");
+      }
+      if (cycleDay === 42) {
+        events.push("hasat");
+        desc.push("🧺 <strong>Fesleğen Hasat Günü:</strong> Fesleğenin yaprak ve dallarını hasat edin, gövde sistemde kalsın. Tank EC'sini 1.4-1.6'ya yükseltin.");
+      }
+    }
+    
+    // Roka Olayları
+    if (hasRoka) {
+      const offset = hasBaseCrops ? 10 : 0;
+      const rokaEkimDay = offset;
+      const rokaLedDay = offset + 3;
+      const rokaTransDay = offset + 12; // Day 22
+      const rokaHarvestDay = offset + 32; // Day 42
+      
+      if (cycleDay === rokaEkimDay) {
+        events.push("ekim");
+        desc.push("🌱 <strong>Roka Ekim Günü:</strong> Roka tohumlarını viyollere ekin (Eş zamanlı hasat için offset uygulandı).");
+      }
+      if (cycleDay === rokaLedDay) {
+        events.push("isik");
+        desc.push("💡 <strong>Roka Işık Açılışı:</strong> Çimlenme tamamlandı, LED grow ışıklarını açın.");
+      }
+      if (cycleDay === rokaTransDay) {
+        events.push("transfer");
+        desc.push("🚚 <strong>Roka Transferi:</strong> Roka fidelerini NFT kanallarına aktarın (EC: 1.0-1.2, pH: 5.8-6.0).");
+      }
+      if (cycleDay === rokaHarvestDay) {
+        events.push("hasat");
+        desc.push("🧺 <strong>Roka Hasat Günü:</strong> Roka yapraklarını taze biçerek veya sökerek hasat edin.");
+      }
+    }
+    
+    return { events, desc, ec };
+  }
+
+  function getActiveCropsStateHTML(cycleDay) {
+    const hasMarul = document.getElementById("chk-marul").checked;
+    const hasFeslegen = document.getElementById("chk-feslegen").checked;
+    const hasRoka = document.getElementById("chk-roka").checked;
+    const hasBaseCrops = hasMarul || hasFeslegen;
+    
+    let html = `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">`;
+    html += `<div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600;">Bitkilerin Günlük Durumu:</div>`;
+    
+    if (hasMarul) {
+      let durum = "Henüz başlamadı";
+      if (cycleDay >= 0) {
+        if (cycleDay < 3) durum = "🌑 Çimlenme Dönemi";
+        else if (cycleDay < 15) durum = "🌱 Fide Dönemi (Viyol)";
+        else if (cycleDay < 42) durum = "🌿 NFT Gelişim Dönemi";
+        else durum = "🧺 Hasat Edildi";
+      }
+      html += `<div style="font-size: 12.5px; display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: var(--muted);">🥬 Marul:</span>
+        <span style="font-weight: 500; color: var(--text);">${cycleDay >= 0 ? cycleDay + ". gün (" + durum + ")" : durum}</span>
+      </div>`;
+    }
+    
+    if (hasFeslegen) {
+      let durum = "Henüz başlamadı";
+      if (cycleDay >= 0) {
+        if (cycleDay < 3) durum = "🌑 Çimlenme Dönemi";
+        else if (cycleDay < 15) durum = "🌱 Fide Dönemi (Viyol)";
+        else if (cycleDay < 30) durum = "🌿 NFT Gelişim Dönemi";
+        else if (cycleDay < 42) durum = "✂️ Form Verme / Budama";
+        else durum = "🌿 Sürekli Hasat Rejimi";
+      }
+      html += `<div style="font-size: 12.5px; display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: var(--muted);">🌿 Fesleğen:</span>
+        <span style="font-weight: 500; color: var(--text);">${cycleDay >= 0 ? cycleDay + ". gün (" + durum + ")" : durum}</span>
+      </div>`;
+    }
+    
+    if (hasRoka) {
+      const offset = hasBaseCrops ? 10 : 0;
+      const rokaAge = cycleDay - offset;
+      let durum = "Henüz ekilmedi";
+      if (rokaAge >= 0) {
+        if (rokaAge < 3) durum = "🌑 Çimlenme Dönemi";
+        else if (rokaAge < 12) durum = "🌱 Fide Dönemi (Viyol)";
+        else if (rokaAge < 32) durum = "🌿 NFT Gelişim Dönemi";
+        else durum = "🧺 Hasat Edildi";
+      }
+      html += `<div style="font-size: 12.5px; display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: var(--muted);">🌱 Roka:</span>
+        <span style="font-weight: 500; color: var(--text);">${rokaAge >= 0 ? rokaAge + ". gün (" + durum + ")" : durum}</span>
+      </div>`;
+    }
+    
+    html += `</div>`;
+    return html;
+  }
+
+  function cizTakvimIzgara() {
+    const izgara = document.getElementById("takvim-izgara");
+    if (!izgara) return;
+    izgara.innerHTML = "";
+    
+    const hasMarul = document.getElementById("chk-marul").checked;
+    const hasFeslegen = document.getElementById("chk-feslegen").checked;
+    const hasRoka = document.getElementById("chk-roka").checked;
+    const hasBaseCrops = hasMarul || hasFeslegen;
+    
+    const maxDays = hasFeslegen ? 48 : 42;
+    const toplamPlanGunu = hasBaseCrops ? maxDays : 32;
+    
+    // Set Roka info panel text
+    const rokaKutu = document.getElementById("roka-plan-kutu");
+    if (hasRoka && hasBaseCrops && activeCycleStartDate) {
+      const rokaEkim = new Date(activeCycleStartDate);
+      rokaEkim.setDate(activeCycleStartDate.getDate() + 10);
+      const rokaTransfer = new Date(rokaEkim);
+      rokaTransfer.setDate(rokaEkim.getDate() + 12);
+      
+      document.getElementById("roka-ekim-tarihi").textContent = formatTrDate(rokaEkim);
+      document.getElementById("roka-transfer-tarihi").textContent = formatTrDate(rokaTransfer);
+      rokaKutu.style.display = "block";
+    } else {
+      if (rokaKutu) rokaKutu.style.display = "none";
+    }
+    
+    const year = currentDisplayDate.getFullYear();
+    const month = currentDisplayDate.getMonth();
+    
+    const aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    document.getElementById("takvim-ay-yil").textContent = `📅 ${aylar[month]} ${year}`;
+    
+    const firstDay = new Date(year, month, 1);
+    let startWeekday = firstDay.getDay(); // 0: Pazar, 1: Pzt...
+    let offset = startWeekday === 0 ? 6 : startWeekday - 1; // Pt:0, Sa:1...
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    const totalCells = (offset + daysInMonth > 35) ? 42 : 35;
+    
+    for (let i = 0; i < totalCells; i++) {
+      let cellDate;
+      let isCurrentMonth = true;
+      
+      if (i < offset) {
+        cellDate = new Date(year, month - 1, daysInPrevMonth - offset + i + 1);
+        isCurrentMonth = false;
+      } else if (i >= offset + daysInMonth) {
+        cellDate = new Date(year, month + 1, i - offset - daysInMonth + 1);
+        isCurrentMonth = false;
+      } else {
+        cellDate = new Date(year, month, i - offset + 1);
+      }
+      
+      const dayEl = document.createElement("div");
+      dayEl.className = "calendar-day";
+      if (!isCurrentMonth) {
+        dayEl.classList.add("out-of-range");
+      }
+      
+      const dayNumEl = document.createElement("div");
+      dayNumEl.className = "calendar-day-num";
+      dayNumEl.textContent = cellDate.getDate();
+      dayEl.appendChild(dayNumEl);
+      
+      const subEl = document.createElement("div");
+      subEl.className = "calendar-day-sub";
+      subEl.textContent = cellDate.toLocaleDateString("tr-TR", { month: "short" });
+      dayEl.appendChild(subEl);
+      
+      // Calculate cycle day
+      let cycleDay = -1;
+      let inPlanRange = false;
+      if (activeCycleStartDate) {
+        const diffTime = cellDate.getTime() - activeCycleStartDate.getTime();
+        cycleDay = Math.round(diffTime / 86400000);
+        inPlanRange = cycleDay >= 0 && cycleDay < toplamPlanGunu;
+      }
+      
+      const dayData = inPlanRange ? getPlanDataForDay(cycleDay) : null;
+      
+      if (dayData && dayData.events.length > 0) {
+        dayEl.classList.add("has-event");
+        const dotsContainer = document.createElement("div");
+        dotsContainer.className = "event-dots";
+        dayData.events.forEach(type => {
+          const dot = document.createElement("div");
+          dot.className = `event-dot dot-${type}`;
+          dotsContainer.appendChild(dot);
+        });
+        dayEl.appendChild(dotsContainer);
+      }
+      
+      // Click handler
+      dayEl.addEventListener("click", () => {
+        document.querySelectorAll(".calendar-day").forEach(d => d.classList.remove("selected"));
+        dayEl.classList.add("selected");
+        gosterGunDetayi(cellDate, dayData, cycleDay);
+      });
+      
+      // Auto highlight start date or today if matches
+      if (activeCycleStartDate && cellDate.toDateString() === activeCycleStartDate.toDateString() && isCurrentMonth) {
+        dayEl.classList.add("selected");
+        setTimeout(() => gosterGunDetayi(cellDate, dayData, cycleDay), 50);
+      }
+      
+      izgara.appendChild(dayEl);
+    }
+  }
+
+  function gosterGunDetayi(date, data, cycleDay) {
+    const baslik = document.getElementById("detay-tarih-baslik");
+    const detayContainer = document.getElementById("takvim-gun-detay");
+    
+    baslik.textContent = `📋 Gün Detayları (${formatTrDate(date)})`;
+    
+    if (!data) {
+      detayContainer.innerHTML = `
+        <div style="font-size:13px; color: var(--muted); text-align: center; padding: 20px 0;">
+          Bu tarihte aktif bir plan bulunmuyor.
+        </div>
+      `;
+      return;
+    }
+    
+    const ecHtml = `
+      <div style="margin-bottom:12px; font-size:14px; background: rgba(52,199,89,0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(52,199,89,0.15); display: flex; justify-content: space-between; align-items: center;">
+        <span style="color: var(--muted); font-size: 13px;">💧 Önerilen Tank EC:</span>
+        <span style="color:var(--green); font-weight:700; font-size: 15px;">${data.ec}</span>
+      </div>
+    `;
+    
+    const descHtml = data.desc.length > 0 
+      ? data.desc.map(d => `<div style="font-size:13px; margin-bottom:8px; line-height:1.4;">${d}</div>`).join("")
+      : `<div style="font-size:13px; color:var(--muted);">Bugün için özel bir işlem bulunmuyor. Rutin kontrolleri yapın.</div>`;
+      
+    const plantsStateHtml = getActiveCropsStateHTML(cycleDay);
+      
+    detayContainer.innerHTML = `
+      <div style="font-size:12px; color:var(--muted); margin-bottom:10px; font-weight:500;">
+        📈 Üretim Döngüsü: <strong>${cycleDay + 1}. Gün</strong>
+      </div>
+      ${ecHtml}
+      <div style="margin-bottom: 12px;">
+        ${descHtml}
+      </div>
+      ${plantsStateHtml}
+    `;
+  }
+
+  function formatTrDate(date, kisa = false) {
+    const gun = date.getDate();
+    const aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    const ay = aylar[date.getMonth()];
+    if (kisa) return `${gun} ${ay.substring(0, 3)}`;
+    return `${gun} ${ay} ${date.getFullYear()}`;
+  }
+
+  function initDefaultDate() {
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const input = document.getElementById("takvim-baslangic");
+      if (input && !input.value) input.value = todayStr;
+    } catch(e) {}
+  }
+  
+  // Run immediately in case DOM is already parsed
+  initDefaultDate();
+
+  // Set default date to today when DOMContentLoaded fires
+  document.addEventListener("DOMContentLoaded", () => {
+    initDefaultDate();
+    
+    // Load cached active plan on load
+    try {
+      const cached = localStorage.getItem("sera_aktif_plan");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (typeof window.aktifDonguRender === "function") {
+          window.aktifDonguRender(parsed);
+        }
+      }
+    } catch (e) {}
+  });
+
+  function aktifPlaniUygula() {
+    let baslangicInput = document.getElementById("takvim-baslangic")?.value;
+    if (!baslangicInput) {
+      // Default to today if date input is missing or empty
+      baslangicInput = new Date().toISOString().split("T")[0];
+      const input = document.getElementById("takvim-baslangic");
+      if (input) input.value = baslangicInput;
+    }
+    
+    const chkMarul = document.getElementById("chk-marul");
+    const chkFeslegen = document.getElementById("chk-feslegen");
+    const chkRoka = document.getElementById("chk-roka");
+    
+    const hasMarul = chkMarul ? chkMarul.checked : false;
+    const hasFeslegen = chkFeslegen ? chkFeslegen.checked : false;
+    const hasRoka = chkRoka ? chkRoka.checked : false;
+    
+    let approved = true;
+    // Sandbox iframes block confirm/alert and return false or throw. Check if inside iframe:
+    if (window.self === window.top) {
+      try {
+        approved = confirm("Seçtiğiniz plan aktif üretim döngüsü olarak seraya uygulanacaktır. Eski döngü bitkileri güncellenecek, ancak kendi eklediğiniz özel bitkiler korunacaktır. Onaylıyor musunuz?");
+      } catch (e) {
+        approved = true;
+      }
+    } else {
+      approved = true; // Auto-approve in previews/iframes
+    }
+    if (!approved) return;
+    
+    const planObj = {
+      baslangic: baslangicInput,
+      marul: hasMarul,
+      feslegen: hasFeslegen,
+      roka: hasRoka,
+      olusturma: Math.floor(Date.now()/1000)
+    };
+    
+    // 1) Yerel Depolamayı Güncelle (Offline / Önizleme desteği için anında günceller)
+    const mevcutBitkiler = typeof window.bitkilerOku === "function" ? window.bitkilerOku() : {};
+    const yeniBitkiler = {};
+    
+    // Kendi eklediği bitkileri (id'si b_pl_ ile başlamayanları) koru
+    for (const key in mevcutBitkiler) {
+      if (!key.startsWith("b_pl_")) {
+        yeniBitkiler[key] = mevcutBitkiler[key];
+      }
+    }
+    
+    const timestamp = Math.floor(Date.now()/1000);
+    
+    if (hasMarul) {
+      const id = "b_pl_marul_" + timestamp.toString(36);
+      yeniBitkiler[id] = {
+        tip: "kivircik",
+        ad: "Kıvırcık marul",
+        hasatGunu: 42,
+        bugunGun: 0,
+        ayarTarihi: new Date(baslangicInput).toISOString(),
+        ikon: "🥬",
+        olusturma: timestamp
+      };
+    }
+    
+    if (hasFeslegen) {
+      const id = "b_pl_fesl_" + timestamp.toString(36);
+      yeniBitkiler[id] = {
+        tip: "feslegen",
+        ad: "Fesleğen",
+        hasatGunu: 42,
+        bugunGun: 0,
+        ayarTarihi: new Date(baslangicInput).toISOString(),
+        ikon: "🌿",
+        olusturma: timestamp + 1
+      };
+    }
+    
+    if (hasRoka) {
+      const id = "b_pl_roka_" + timestamp.toString(36);
+      const rokaDate = new Date(baslangicInput);
+      rokaDate.setDate(rokaDate.getDate() + 10);
+      yeniBitkiler[id] = {
+        tip: "roka",
+        ad: "Roka (Arugula)",
+        hasatGunu: 32,
+        bugunGun: 0,
+        ayarTarihi: rokaDate.toISOString(),
+        ikon: "🌱",
+        olusturma: timestamp + 2
+      };
+    }
+
+    try {
+      localStorage.setItem("sera_aktif_plan", JSON.stringify(planObj));
+      localStorage.setItem("sera_bitkiler", JSON.stringify(yeniBitkiler));
+      
+      // Arayüzü yerel olarak hemen güncelle
+      if (typeof window.aktifDonguRender === "function") window.aktifDonguRender(planObj);
+      if (typeof window.bitkileriRender === "function") window.bitkileriRender();
+    } catch(e) {
+      console.warn("Yerel kaydetme başarısız:", e);
+    }
+    
+    // 2) Bulut Veritabanı Senkronizasyonu (Arka planda çalışır)
+    if (window.__firebaseDb && window.__firebaseSet && window.__firebaseRef) {
+      const planRef = window.__firebaseRef(window.__firebaseDb, "sera1/aktif_plan");
+      const bitkilerRef = window.__firebaseRef(window.__firebaseDb, "sera1/bitkiler");
+      
+      window.__firebaseSet(planRef, planObj)
+        .then(() => window.__firebaseSet(bitkilerRef, yeniBitkiler))
+        .catch(err => console.warn("Firebase senkronizasyon hatası:", err));
+    }
+    
+    if (window.self === window.top) {
+      try {
+        alert("Döngü başarıyla başlatıldı ve bitkileriniz ana ekrana senkronize edildi!");
+      } catch(e) {}
+    }
+    
+    // Ana ekrana (Sensörler) geçiş yap
+    const sensorBtn = document.querySelector(".bottom-nav button:first-child");
+    if (sensorBtn) window.switchTab("view-sensor", sensorBtn);
+  }
+
+  function aktifPlanSonlandir() {
+    let approved = true;
+    if (window.self === window.top) {
+      try {
+        approved = confirm("Aktif üretim döngüsünü sonlandırmak istiyor musunuz? Bu işlem döngü kapsamındaki bitkileri silecektir, kendi eklediğiniz özel bitkiler korunacaktır.");
+      } catch(e) {
+        approved = true;
+      }
+    } else {
+      approved = true;
+    }
+    if (!approved) return;
+    
+    const mevcutBitkiler = typeof window.bitkilerOku === "function" ? window.bitkilerOku() : {};
+    const yeniBitkiler = {};
+    for (const key in mevcutBitkiler) {
+      if (!key.startsWith("b_pl_")) {
+        yeniBitkiler[key] = mevcutBitkiler[key];
+      }
+    }
+    
+    // 1) Yerel depolamayı temizle ve arayüzü güncelle
+    try {
+      localStorage.removeItem("sera_aktif_plan");
+      localStorage.setItem("sera_bitkiler", JSON.stringify(yeniBitkiler));
+      
+      if (typeof window.aktifDonguRender === "function") window.aktifDonguRender(null);
+      if (typeof window.bitkileriRender === "function") window.bitkileriRender();
+    } catch(e) {
+      console.warn("Yerel temizleme başarısız:", e);
+    }
+    
+    // 2) Bulut veritabanını temizle
+    if (window.__firebaseDb && window.__firebaseSet && window.__firebaseRef) {
+      const planRef = window.__firebaseRef(window.__firebaseDb, "sera1/aktif_plan");
+      const bitkilerRef = window.__firebaseRef(window.__firebaseDb, "sera1/bitkiler");
+      
+      window.__firebaseSet(planRef, null)
+        .then(() => window.__firebaseSet(bitkilerRef, yeniBitkiler))
+        .catch(err => console.warn("Firebase temizleme hatası:", err));
+    }
+    
+    if (window.self === window.top) {
+      try {
+        alert("Döngü sonlandırıldı.");
+      } catch(e) {}
+    }
+  }
+
+  function aktifDonguRender(plan) {
+    const kart = document.getElementById("aktif-dongu-karti");
+    if (!kart) return;
+    
+    if (!plan) {
+      kart.style.display = "none";
+      kart.innerHTML = "";
+      return;
+    }
+    
+    const baslangic = new Date(plan.baslangic);
+    const bugun = new Date();
+    const diffTime = bugun.getTime() - baslangic.getTime();
+    const cycleDay = Math.round(diffTime / 86400000);
+    
+    const hasBaseCrops = plan.marul || plan.feslegen;
+    const maxDays = plan.feslegen ? 48 : 42;
+    const totalPlanGunu = hasBaseCrops ? maxDays : 32;
+    
+    if (cycleDay < 0 || cycleDay >= totalPlanGunu) {
+      // Döngü süresi bitmiş veya gelecekte bir tarih
+      kart.style.display = "none";
+      return;
+    }
+    
+    const dayData = getPlanDataForDay(cycleDay);
+    if (!dayData) {
+      kart.style.display = "none";
+      return;
+    }
+    
+    // Emojiler ve aksiyonları temizle
+    const cleanDesc = dayData.desc.length > 0 
+      ? dayData.desc.map(d => d.replace(/<\/?[^>]+(>|$)/g, "")).join(" | ")
+      : "Rutin pH/EC kontrolleri ve su seviyesi takibi yapın.";
+      
+    kart.style.display = "block";
+    kart.innerHTML = `
+      <div style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.12) 0%, rgba(10, 132, 255, 0.08) 100%); border: 1px solid rgba(52, 199, 89, 0.25); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; position: relative; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13.5px; font-weight: 700; color: var(--green); letter-spacing: -0.2px;">🌿 Aktif Üretim Döngüsü (${cycleDay + 1}. Gün)</span>
+          <span style="font-size: 11px; color: var(--muted); font-weight: 500; font-feature-settings: 'tnum';">${formatTrDate(baslangic, true)} başlangıç</span>
+        </div>
+        <div style="margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);">
+          <span style="color: var(--muted);">💧 Bugünün Hedef EC Sınırı:</span>
+          <span style="color: var(--green); font-weight: 700;">${dayData.ec.split(" ")[0]} EC</span>
+        </div>
+        <div style="font-size: 12px; line-height: 1.4; color: var(--text); background: rgba(52, 199, 89, 0.05); padding: 8px 10px; border-radius: 8px; border: 1px dashed rgba(52,199,89,0.2); margin-bottom: 10px;">
+          📌 <strong>Bugünün Aksiyonu:</strong> ${cleanDesc}
+        </div>
+        <button class="hasat-ayarla-btn" onclick="aktifPlanSonlandir()" style="width: 100%; text-align: center; border-color: rgba(255, 69, 58, 0.25); color: var(--red); background: rgba(255, 69, 58, 0.06); font-size: 12px; padding: 6px 0; font-weight: 600;">
+          🛑 Aktif Üretim Döngüsünü Sonlandır
+        </button>
+      </div>
+    `;
+  }
+
+  // Global erişim için fonksiyonları window'a bağla
+  window.switchTab = switchTab;
+  window.aktorDegistir = aktorDegistir;
+  window.dozajVer = dozajVer;
+  window.ozelDozajVer = ozelDozajVer;
+  window.timerKaydet = timerKaydet;
+  window.esikleriKaydet = esikleriKaydet;
+  window.modDegistir = modDegistir;
+  window.hesaplaTakvim = hesaplaTakvim;
+  window.oncekiAy = oncekiAy;
+  window.sonrakiAy = sonrakiAy;
+  window.aktifPlaniUygula = aktifPlaniUygula;
+  window.aktifPlanSonlandir = aktifPlanSonlandir;
+  window.aktifDonguRender = aktifDonguRender;
+
+</script>
+
+</body>
+</html>
