@@ -848,3 +848,12 @@ To https://github.com/sibirya59/planet.free.git
 ---------------------------------------- 
 [Pzt 06.07.2026 16:47:00,79] Otomatik kayit basliyor... 
 Already up to date.
+warning: in the working copy of 'otomatik_kayit_log.txt', LF will be replaced by CRLF the next time Git touches it
+[main 071ec4d] Saatlik otomatik arka plan yedeklemesi
+ 1 file changed, 9 insertions(+)
+To https://github.com/sibirya59/planet.free.git
+   2635894..071ec4d  main -> main
+[Pzt 06.07.2026 16:47:04,43] Kayit tamamlandi. 
+---------------------------------------- 
+[Pzt 06.07.2026 17:47:00,77] Otomatik kayit basliyor... 
+Already up to date.
