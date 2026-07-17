@@ -1805,3 +1805,12 @@ fatal: unable to access 'https://github.com/sibirya59/planet.free.git/': Could n
 ---------------------------------------- 
 [Cum 17.07.2026  8:47:00,31] Otomatik kayit basliyor... 
 Already up to date.
+warning: in the working copy of 'otomatik_kayit_log.txt', LF will be replaced by CRLF the next time Git touches it
+[main 6f54bc2] Saatlik otomatik arka plan yedeklemesi
+ 1 file changed, 8 insertions(+)
+To https://github.com/sibirya59/planet.free.git
+   72f5830..6f54bc2  main -> main
+[Cum 17.07.2026  8:47:03,83] Kayit tamamlandi. 
+---------------------------------------- 
+[Cum 17.07.2026  9:47:00,34] Otomatik kayit basliyor... 
+Already up to date.
