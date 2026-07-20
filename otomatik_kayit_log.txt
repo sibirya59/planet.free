@@ -1922,3 +1922,12 @@ To https://github.com/sibirya59/planet.free.git
 ---------------------------------------- 
 [Cum 17.07.2026 21:47:00,42] Otomatik kayit basliyor... 
 Already up to date.
+warning: in the working copy of 'otomatik_kayit_log.txt', LF will be replaced by CRLF the next time Git touches it
+[main 4a75402] Saatlik otomatik arka plan yedeklemesi
+ 1 file changed, 9 insertions(+)
+To https://github.com/sibirya59/planet.free.git
+   0c9810b..4a75402  main -> main
+[Cum 17.07.2026 21:47:03,57] Kayit tamamlandi. 
+---------------------------------------- 
+[Pzt 20.07.2026  8:27:38,23] Otomatik kayit basliyor... 
+fatal: unable to access 'https://github.com/sibirya59/planet.free.git/': Could not resolve host: github.com
